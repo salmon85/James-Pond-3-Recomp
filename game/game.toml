@@ -1,0 +1,49 @@
+# game.toml — James Pond 3: Operation Starfish (Millennium / Electronic Arts, 1993)
+# Sega Genesis / Mega Drive, USA+Europe dump.
+#
+# ROM identity (No-Intro "James Pond 3 (USA, Europe).md"):
+#   size   2,097,152 bytes (2 MB)
+#   CRC32  0x26F64B2A
+#   SHA256 8f52e27945b96d6c37fda28c44d39d65d805cc0b58332f9b4a2eb26dff540d29
+#   header "JAMES POND III", serial GM T-50646 -00, regions U/E/J
+#
+# Vector table is unusual (Sega's stock init code owns the first 1 KB):
+#   $000000 SSP   = 0x00000000  (the 68K wraps to $FFFFFC on first push)
+#   $000004 entry = 0x00000200  (Sega init: TMSS, VDP, Z80, RAM clear)
+#   $000070 H-int = 0xFFFFFD0A  (RAM-installed trampoline)
+#   $000078 V-int = 0xFFFFFD10  (RAM-installed trampoline)
+# The init code jumps to the actual game entry at $001FDCBC.
+#
+# There is no community disassembly for this game. Discovery is the
+# recompiler's heuristic (vector-table scan + BSR/JSR/RTS walk) with the
+# validator-gated PC-relative jump-table walker enabled. The Tier-3
+# interpreter floor is kept on for unresolved dynamic targets, and each run's
+# dispatch_misses.toml / floor_coverage.toml feeds the audited function list.
+
+[game]
+output_prefix = "jp3"
+jump_table_autodiscovery = true
+
+[ram_layout]
+game_mode      = 0x000000     # unknown — cosmetic until reverse-engineered
+vint_runcount  = 0x000000     # unknown
+vint_routine   = 0x000000     # unknown
+plc_pending    = 0x000000     # no Sonic-style PLC system
+initial_ssp    = 0x00000000   # reset vector: 0 wraps to $FFFFFC on push
+vbla_stack     = 0x00000000   # IRQ stack follows the same wrapped top-of-RAM
+intr_stack     = 0x00000000
+player_object  = 0x000000     # unknown
+level_modes    = []
+
+[functions]
+# Vector-table seeds are automatic; the game entry reached by the stock init
+# routine's JSR is listed explicitly because it is the real main routine.
+extra = [
+    0x000200,   # reset vector: stock Sega init / loader
+    0x1FDCBC,   # JSR target at $0002FA: game entry point
+    0x0B5FF0,   # V-int body reached through the RAM trampoline at $FFFFFD10
+    0x0B600E,   # H-int body (plain RTE) reached through $FFFFFD0A
+    0x1FDC20,   # JSR target at the top of the V-int handler ($0B5FFE)
+]
+late_extra = []
+blacklist = []

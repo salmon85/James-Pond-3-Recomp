@@ -1,0 +1,21 @@
+# Build output
+/build/
+/engine/build/
+
+# Local scratch / emulator captures
+/.work/
+
+# ROMs and derived dumps (never commit)
+/James Pond 3*.md
+/game/jp3.md
+/game/*.bin
+*.sav
+*.state
+
+# Runtime evidence / logs
+*.log
+dispatch_misses*.toml
+floor_coverage*.toml
+floor_unsafe*.toml
+interior_label_misses*.toml
+mem_write_log*.log
