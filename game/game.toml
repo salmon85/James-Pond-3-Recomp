@@ -76,12 +76,10 @@ extra = [
 late_extra = [
     0x0B5B00,   # VDP/scroll helper (dispatch miss)
     0x0A8016,   # JMP (A4) tilemap-blitter target
-    0x0BD4A8,   # object-update entry reached from the state table
-    0x0BD524,   # object-update interior target
-    0x0BD528,   # object-update interior target
-    0x0BD544,   # object-update dispatch target
-    0x0BD59C,   # object-update helper
-    0x0BD5BC,   # object-update helper
-    0x0BD620,   # object-update state label
 ]
+# The $0BD496 object-update cluster produced runtime targets that decode to
+# mid-instruction operands ($0BD4A8, $0BD524, $0BD528, $0BD618). They are return
+# addresses/misaligned computed targets, NOT callable entries: promoting
+# $0BD524 made the recompiler execute the $F836 operand as an opcode and abort.
+# Leave them as declined floor misses until the dispatcher offset is fixed.
 blacklist = []

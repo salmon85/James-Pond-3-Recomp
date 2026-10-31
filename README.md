@@ -76,6 +76,10 @@ SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
 # Exercise movement, jumping, and tongue attacks in Garden of Edam
 SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
   ./JamesPond3Recomp jp3.md --turbo --input-script ../tools/move_attack_probe.input
+
+# Jump repeatedly while moving right (first-platform regression probe)
+SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
+  ./JamesPond3Recomp jp3.md --turbo --input-script ../tools/jump_probe.input
 ```
 
 ## Status
@@ -86,9 +90,10 @@ SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
       path, EA logo, intro story, title screen, and menu.
 - [x] First gameplay level ("Garden of Edam") renders with terrain, HUD,
       player sprite, camera, and working input.
-- [x] Movement, jumping, tongue attack, and object/state-table handlers are
-      native; the move/attack corruption seen in early runs is fixed by the
-      audited `late_extra` entries below.
+- [x] Movement, jumping, tongue attack, and object/state-table dispatch run
+      through native code. The corrected build completes a 12,121-frame
+      move/jump/attack probe with no dispatch, floor, or interior-label
+      misses.
 - [x] 60 Hz (NTSC): the game reads `$A10001 = $80` and sets
       `$FFFD18 = $FF` (export) / `$FFFD19 = $00` (NTSC). The runner pacer is
       59.94 fps.
@@ -97,12 +102,12 @@ SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
       original game's raster transition: the same frame appears in NTSC MAME.
       Stable menu frames and gameplay are clean.
 
-The audited runtime-driven entries are in `[functions].late_extra` in
-`game/game.toml` (`$0A8016`, `$0BD4A8`, `$0BD524`, `$0BD528`, `$0BD544`,
-`$0BD59C`, `$0BD5BC`, `$0BD620`). They were reached by computed dispatch in
-Garden of Edam; before they were promoted, the interpreter floor left the
-object state partially updated and the display could collapse into VRAM
-garbage.
+The only audited runtime-driven entries retained are `$0B5B00` (VDP/scroll
+helper) and `$0A8016` (tilemap-blitter jump target). The `$0BD496` object-update
+cluster also produced runtime targets, but `$0BD4A8`, `$0BD524`, `$0BD528`,
+and `$0BD618` decode to mid-instruction operands. Promoting `$0BD524` made the
+recompiler execute the `$F836` operand as an opcode and abort. They are left as
+declined floor misses; the corrected build does not abort.
 
 ## Layout
 
