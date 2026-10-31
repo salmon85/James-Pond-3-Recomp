@@ -49,6 +49,17 @@
       (`$0BD524`/`$0BD618`).
 - [x] 5,321-frame active movement/jumping/attacking run (debug build) with
       zero unique dispatch misses, no floor/illegal events, and no freeze.
+- [x] Reproduced the sprint/off-floor freeze as a lost control-flow edge:
+      the computed jump at `$0B18E6` dropped the path-local stack delta, so
+      the `$0B1C5E` epilogue RTS mistook the register restore for skipped
+      return slots and unwound the game fiber.
+- [x] Carry `_sp_popped` through `hybrid_jmp_interpret`; the 48,161-frame
+      normal sprint probe, the 80,000-frame benchmark sprint probe, and the
+      80,000-frame release probe with `GENESIS_STRICT_JSR_STACK=1` complete
+      with no game-fiber stall, JSR-stack mismatch, illegal opcode, or
+      freeze.
+- [x] Add a game-fiber-only block trail (`crash_trail_main`), `sched_info`,
+      and `[SCHED-STUCK]` logging to the reverse-debug surface.
 
 ## Follow-ups
 

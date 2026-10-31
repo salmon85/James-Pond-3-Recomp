@@ -114,6 +114,11 @@ SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
       a corrupted `FCF4` no longer jumps into instruction operands. A
       5,321-frame active-play run completed with zero unique dispatch misses
       and no freeze.
+- [x] Sprint/off-floor freeze fixed: computed-jump dispatch now carries the
+      path-local stack delta, so split map-builder epilogues return through
+      their caller instead of unwinding the game fiber. The extended
+      sprint/jump/attack probe completes 80,000 frames with
+      `GENESIS_STRICT_JSR_STACK=1`, no stall, and no freeze.
 - [x] Optional reverse-debug build (`-DSONIC_REVERSE_DEBUG=ON`) exposes the
       current generated function and block trail for GDB/TCP capture.
 - [x] Audio output verified from Garden of Edam with an SDL disk capture:
