@@ -38,6 +38,11 @@ static int s_busreq_depth;
  * slot behind and leaks 4 bytes of guest stack per decompression. */
 static int jp3_instruction_hook(uint32_t pc)
 {
+    if (pc == 0x0BD424u) {
+        /* Five valid entries at $0BD428, stride 4. Clamp corrupted states. */
+        if (g_cpu.D[0] > 16u) g_cpu.D[0] = 0u;
+        return 0;
+    }
     if (pc == 0x0B6FA2u) {
         if (s_busreq_depth++ == 0)
             s_busreq_sr = g_cpu.SR;
