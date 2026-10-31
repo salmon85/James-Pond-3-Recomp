@@ -82,6 +82,17 @@ SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
   ./JamesPond3Recomp jp3.md --turbo --input-script ../tools/jump_probe.input
 ```
 
+## Save states
+
+`Shift+F1..F9` saves, `F1..F9` loads; on a gamepad, LB saves slot 1 and RB
+loads it. A save contains the portable CPU/RAM/VDP image plus an embedded
+in-process rollback snapshot of the suspended game fiber. Loading it in the
+session that wrote it restores the exact yield point — same game mode, frame
+position, scheduler state and pending work — so repeated loads are
+deterministic. Saves from another process or an older build lack a usable
+fiber-stack mapping; they restore the portable image and restart the game
+fiber at the main-loop entry (`$0B72C8`).
+
 ## Status
 
 - [x] Recompiler builds on Linux; ROM identity verified.
@@ -121,6 +132,10 @@ SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
       `GENESIS_STRICT_JSR_STACK=1`, no stall, and no freeze. Live play
       through both prior freeze locations, including the hidden trigger that
       spawns the extra moons, also completes cleanly.
+- [x] Save states resume the suspended game fiber from an embedded rollback
+      snapshot instead of restarting at a guessed main-loop PC. 20
+      consecutive loads of one save each restored the exact yield point and
+      advanced the game; no watchdog, dispatch, or illegal-opcode events.
 - [x] Optional reverse-debug build (`-DSONIC_REVERSE_DEBUG=ON`) exposes the
       current generated function and block trail for GDB/TCP capture.
 - [x] Audio output verified from Garden of Edam with an SDL disk capture:

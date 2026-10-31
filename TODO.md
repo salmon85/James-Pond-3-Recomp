@@ -62,9 +62,21 @@
       and `[SCHED-STUCK]` logging to the reverse-debug surface.
 - [x] Live validation: both prior freeze locations now complete, including
       the hidden trigger that spawns the extra moons; no crash or stall.
+- [x] Promote the Camonbert Canyon enemy update handlers and their state
+      ladders (`$0A9FC6`, `$0AC402`, `$0AC41A`, `$0AC41E`, `$0AC2B6`) so
+      enemies move and take damage instead of being declined by the Tier-3
+      capsule.
+- [x] Save states embed an in-process rollback snapshot of the suspended game
+      fiber, so same-process loads restore the exact yield point, game mode,
+      and scheduler state. 20 consecutive loads of one save each resumed
+      exactly and advanced the game with no watchdog, dispatch, or
+      illegal-opcode events.
 
 ## Follow-ups
 
+- [ ] Cross-process/older save loads still fall back to restarting the game
+      fiber at `$0B72C8`, which can mismatch map vs. level mode. Decode the
+      guest stack into a restorable guest state to remove the fallback.
 - [ ] Audit the upstream `$0BD496` computed-dispatch offset that produces the
       misaligned targets, so they can eventually be handled as in-function
       labels instead of declined floor misses.
@@ -78,4 +90,7 @@
 - Generated C is a build artifact; never hand-edit it. Fix `game.toml`,
   discovery seeds, or the runtime instead.
 - The ROM is user-supplied and is not tracked by Git.
+- Save files are only exact-resume in the process that wrote them; a save
+  loaded by another process (or an older build) restores RAM/VDP and
+  restarts the fiber at `$0B72C8`.
 - The title/menu wipe is a raster transition; stable menu frames are clean.

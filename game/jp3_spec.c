@@ -94,7 +94,11 @@ const GameSpec g_game_spec = {
     .call_vblank            = jp3_call_vblank,
     .call_hblank            = jp3_call_hblank,
 
-    .resume_main_loop_pc    = 0u,
+    /* $0B72C8 is the top of the per-frame main loop. Same-process saves
+     * restore the suspended fiber snapshot and never use this; legacy or
+     * cross-process saves lack that stack and restart the fiber here rather
+     * than resuming an arbitrary host stack. */
+    .resume_main_loop_pc    = 0x0B72C8u,
     .save_resume_pc         = NULL,
     .dispatch_main_loop_pc  = 0u,
     .call_periodic          = NULL,

@@ -1104,6 +1104,9 @@ static const char *resolve_runner_path(const char *path, char *buf, size_t buf_l
  * layout (superzazu z80 embedded in g_machine, no side ext blob); GROWNS1
  * saves are rejected with a clear message rather than misloaded. */
 static const char OWN_SAVE_MAGIC[8] = "GROWNS2\0";
+/* Optional trailer in an own-backend save: a genesis_rb blob whose exec
+ * section restores this process's suspended game fiber. */
+static const char OWN_SAVE_RB_MAGIC[8] = { 'G','R','B','R','B','1',0,0 };
 #include "host_state.h"
 
 int runner_save_state_file(const char *path)
@@ -1126,6 +1129,23 @@ int runner_save_state_file(const char *path)
     ok = ok && machine_save_state(sf);
     ok = ok && ym2612_save_state(sf);
     ok = ok && psg_save_state(sf);
+    /* Append the in-process rollback blob. It embeds the suspended game
+     * fiber's host stack, so a load in this process resumes the exact yield
+     * point (mode, fiber, scheduler) instead of guessing a restart PC. A
+     * load in another process fails its stack-range check and falls back to
+     * the portable sections above. */
+    if (ok) {
+        size_t bound = genesis_rb_bound();
+        uint8_t *blob = (uint8_t *)malloc(bound);
+        size_t n = blob ? genesis_rb_save(blob, bound) : 0;
+        if (n) {
+            uint64_t len = (uint64_t)n;
+            ok = fwrite(OWN_SAVE_RB_MAGIC, 1, sizeof OWN_SAVE_RB_MAGIC, sf) == sizeof OWN_SAVE_RB_MAGIC &&
+                 fwrite(&len, 1, sizeof len, sf) == sizeof len &&
+                 fwrite(blob, 1, n, sf) == n;
+        }
+        free(blob);
+    }
     ok = ok && !ferror(sf);
     fclose(sf);
 
@@ -1185,6 +1205,31 @@ int runner_load_state_file(const char *path)
     ok = ok && machine_load_state(sf);
     ok = ok && ym2612_load_state(sf);
     ok = ok && psg_load_state(sf);
+    /* Optional trailer: the in-process rollback blob, including the
+     * suspended fiber stack. Absent in saves from older builds. */
+    uint8_t *rb_blob = NULL;
+    size_t rb_len = 0;
+    if (ok) {
+        char tr[8];
+        size_t got = fread(tr, 1, sizeof tr, sf);
+        if (got == 0) {
+            /* legacy save: portable sections only */
+        } else if (got == sizeof tr &&
+                   memcmp(tr, OWN_SAVE_RB_MAGIC, sizeof tr) == 0) {
+            uint64_t n = 0;
+            if (fread(&n, 1, sizeof n, sf) != sizeof n ||
+                n > (uint64_t)512u * 1024u * 1024u ||
+                (n && !(rb_blob = (uint8_t *)malloc((size_t)n)))) {
+                ok = 0;
+            } else if (n && fread(rb_blob, 1, (size_t)n, sf) != (size_t)n) {
+                ok = 0;
+            } else {
+                rb_len = (size_t)n;
+            }
+        } else {
+            ok = 0;   /* trailing bytes are not a known trailer */
+        }
+    }
     ok = ok && fgetc(sf) == EOF && !ferror(sf);
     fclose(sf);
 
@@ -1194,11 +1239,22 @@ int runner_load_state_file(const char *path)
     }
     free(backup);
 
-    /* Drop any chip writes queued by the frame the save interrupted; the
-     * restored chips already contain their effect. */
-    if (ok) audio_event_queue_reset();
+    /* Exact same-process resume: the embedded blob carries the fiber stack
+     * and scheduler, so the game continues at the yield point it was saved
+     * at — no guessed main-loop entry, no mode mismatch. */
+    int exact_resume = 0;
+    if (ok && rb_blob && genesis_rb_load(rb_blob, rb_len)) {
+        exact_resume = 1;
+        fprintf(stderr, "[LOAD] exact fiber resume\n");
+    }
+    free(rb_blob);
 
-    if (ok) {
+    /* Drop any chip writes queued by the frame the save interrupted; the
+     * restored chips already contain their effect. The exact-resume blob
+     * restores its own queue and must keep it. */
+    if (ok && !exact_resume) audio_event_queue_reset();
+
+    if (ok && !exact_resume) {
         /* Mode-aware resume: re-enter at the restored Game_Mode's per-frame
          * loop top (moment-in-time) when the game maps one; otherwise fall
          * back to the outer dispatcher (mode-handler re-entry / reload). */
