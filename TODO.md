@@ -39,6 +39,11 @@
 - [x] Add a reverse-debug build (`-DSONIC_REVERSE_DEBUG=ON`) and a GDB capture
       harness that records the current generated function, guest registers,
       recent block trail, and host backtrace on crash/freeze.
+- [x] Debug capture localized the frog/sky corruption to a floor capsule at
+      `$0B5AF8`, a target of the `$0B5AF4` VDP dispatcher table. Promoted
+      `$0B5AF4`, `$0B5AF8`, and `$0B5AFC` so the whole table is native.
+- [x] 60-second audio-enabled Garden of Edam idle with strict JSR stack checks
+      completes with no floor or dispatch misses.
 
 ## Follow-ups
 
