@@ -85,6 +85,9 @@ extra = [
 # jumping, and attacking in Garden of Edam. Kept late so they cannot
 # recursively reopen heuristic discovery.
 late_extra = [
+    0x0B5AF4,   # BRA.W target in the $0B5AE6 VDP dispatcher table
+    0x0B5AF8,   # BSR/BRA target in the same table (was a floor capsule)
+    0x0B5AFC,   # BRA.W target in the same table
     0x0B5B00,   # VDP/scroll helper (dispatch miss)
     0x0A8016,   # JMP (A4) tilemap-blitter target
     0x0B5D54,   # VDP setup continuation reached by computed dispatch
