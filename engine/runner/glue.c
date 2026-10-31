@@ -1727,23 +1727,9 @@ uint32_t m68k_read32(uint32_t byte_addr)
     return ((uint32_t)hi << 16) | (uint32_t)lo;
 }
 
-#ifdef GENESIS_TRACE_D9BA
-static void jp3_trace_d9ba(const char *tag, uint32_t addr, uint32_t val, int bytes)
-{
-    if (addr <= 0x00FFD9BAu && 0x00FFD9BAu < addr + (uint32_t)bytes) {
-        fprintf(stderr, "[D9BA] %s addr=%06X len=%d val=%08X frame=%llu a7=%08X ra=%p\n",
-                tag, addr, bytes, val, (unsigned long long)g_frame_count,
-                g_cpu.A[7], __builtin_return_address(0));
-    }
-}
-#endif
-
 void m68k_write16(uint32_t byte_addr, uint16_t val)
 {
     byte_addr &= 0xFFFFFFu;
-#ifdef GENESIS_TRACE_D9BA
-    jp3_trace_d9ba("W16", byte_addr, val, 2);
-#endif
     watchdog_check(byte_addr, 1, val);
     bus_ring_push(byte_addr, 4);
     /* 16-bit FM writes land one byte per port per cycle on hardware. The
@@ -1762,9 +1748,6 @@ void m68k_write16(uint32_t byte_addr, uint16_t val)
 void m68k_write8(uint32_t byte_addr, uint8_t val)
 {
     byte_addr &= 0xFFFFFFu;
-#ifdef GENESIS_TRACE_D9BA
-    jp3_trace_d9ba("W8", byte_addr, val, 1);
-#endif
     watchdog_check(byte_addr, 1, val);
     bus_ring_push(byte_addr, 3);
     audio_detour_write(byte_addr, val);
@@ -1784,9 +1767,6 @@ void m68k_write8(uint32_t byte_addr, uint8_t val)
 void m68k_write32(uint32_t byte_addr, uint32_t val)
 {
     byte_addr &= 0xFFFFFFu;
-#ifdef GENESIS_TRACE_D9BA
-    jp3_trace_d9ba("W32", byte_addr, val, 4);
-#endif
     watchdog_check(byte_addr, 1, (uint32_t)(val >> 16));
     bus_ring_push(byte_addr, 5);
     /* 32-bit write = two consecutive 16-bit writes. Only matters for FM

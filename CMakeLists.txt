@@ -57,12 +57,6 @@ target_compile_definitions(JamesPond3Recomp PRIVATE
     DEFAULT_DEBUG_PORT=4382
     GENESIS_GAME_VERSION="${PROJECT_VERSION}"
 )
-option(JP3_TRACE_D9BA "Temporary bring-up tracing for the $D9BA state byte" OFF)
-if(JP3_TRACE_D9BA)
-    target_compile_definitions(JamesPond3Recomp PRIVATE GENESIS_TRACE_D9BA=1)
-    # Fixed load address makes __builtin_return_address() resolvable with addr2line.
-    target_link_options(JamesPond3Recomp PRIVATE -no-pie)
-endif()
 # Keep symbols available for source-level bring-up debugging.
 target_compile_options(JamesPond3Recomp PRIVATE -g)
 

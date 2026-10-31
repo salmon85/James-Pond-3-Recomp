@@ -66,12 +66,14 @@ confirmed against the ROM, promoted into `game/game.toml`.
 - [x] Recompiler builds on Linux; ROM identity verified.
 - [x] 68K→C generation succeeds with no unsupported instruction reports.
 - [x] Native executable boots the retail ROM through the Sega init/checksum
-      path and reaches the EA logo / opening credits.
-- [ ] Opening sequence completes and reaches the title/menu (in progress:
-      a 16-bit write in the `$0B6DEE` palette converter overruns into the
-      `$D9BA` script state byte).
-- [ ] 60 Hz (NTSC) mode selected and validated.
-- [ ] First gameplay level validated against a trusted emulator.
+      path, EA logo, intro story, title screen, and menu.
+- [x] First gameplay level ("Garden of Edam") renders with terrain, HUD,
+      player sprite, camera, and working input.
+- [x] 60 Hz (NTSC): the game reads `$A10001 = $80` and sets
+      `$FFFD18 = $FF` (export) / `$FFFD19 = $00` (NTSC). The runner pacer is
+      59.94 fps.
+- [ ] Full-level progression and audio validated against a trusted emulator.
+- [ ] Remaining evidence-driven discovery gaps audited (see runtime files).
 
 ## Layout
 

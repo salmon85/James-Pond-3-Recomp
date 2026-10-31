@@ -35,6 +35,20 @@ intr_stack     = 0x00000000
 player_object  = 0x000000     # unknown
 level_modes    = []
 
+# Audited pre-instruction hook: $0B6D88 is an RTS used as a computed jump.
+# The decompressor at $0B6D3E pushes the epilogue address $0B6DE6 with PEA and
+# later RTSes into it. The generated split function would otherwise unwind as a
+# normal return and skip the MOVEM restore/D0 result. The game adapter detects
+# this site and performs the pop+tail dispatch explicitly.
+[[widescreen_site]]
+addr = 0x0B6D88
+kind = "game_hook"
+
+# The main decode loop ends with the same PEA-target RTS at $0B6DE4.
+[[widescreen_site]]
+addr = 0x0B6DE4
+kind = "game_hook"
+
 [functions]
 # Vector-table seeds are automatic; the game entry reached by the stock init
 # routine's JSR is listed explicitly because it is the real main routine.
@@ -44,6 +58,16 @@ extra = [
     0x0B5FF0,   # V-int body reached through the RAM trampoline at $FFFFFD10
     0x0B600E,   # H-int body (plain RTE) reached through $FFFFFD0A
     0x1FDC20,   # JSR target at the top of the V-int handler ($0B5FFE)
+    0x0B6DE6,   # PEA-pushed epilogue of the $0B6D3E decompressor
+    0x0C332C,   # later V-int handler installed into $FFFFFD12
+    0x0C3390,   # later H-int handler installed into $FFFFFD0C
+    0x0C3350,   # installer / helper used by the $0C3390 H-int path
+    0x0C3348,   # VDP register helper in the $0C332C V-int cluster
+    0x0C3378,   # scroll/VRAM helper called from both handlers
+    0x0C339E,   # object/scroll state helper in the $0C3390 cluster
+    0x09FA16,   # title/intro H-int handler installed into $FFFFFD0C
+    0x09FA3C,   # H-int scroll setup helper called from $09FA16's cluster
+    0x0A7F2E,   # static JMP (A4) target in the level tilemap blitter
 ]
 late_extra = []
 blacklist = []
