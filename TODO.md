@@ -33,6 +33,12 @@
       the A7-neutral tier-3 capsule; the capsule was responsible for the
       `A7=$22` freeze. A 60-second audio-enabled idle in Garden of Edam now
       completes with `GENESIS_STRICT_JSR_STACK=1`.
+- [x] Fix the time-based `$0B6FAA` livelock: a V/H interrupt could run the
+      matching Z80 bus release between the request write and ACK poll. Mask
+      IPL 1-7 for the helper body and restore the mask at its RTS.
+- [x] Add a reverse-debug build (`-DSONIC_REVERSE_DEBUG=ON`) and a GDB capture
+      harness that records the current generated function, guest registers,
+      recent block trail, and host backtrace on crash/freeze.
 
 ## Follow-ups
 

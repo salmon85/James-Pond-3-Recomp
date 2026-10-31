@@ -104,6 +104,11 @@ SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
       now a native generated function. The former tier-3 capsule framed it
       A7-neutrally and exited at `A7=$22`; a 60-second audio-enabled idle in
       Garden of Edam now completes without a freeze.
+- [x] Time-based `$0B6FAA` livelock fixed: V/H interrupts are masked for the
+      Z80 bus request/ACK helper so an interrupt cannot release the bus
+      between the request and its poll.
+- [x] Optional reverse-debug build (`-DSONIC_REVERSE_DEBUG=ON`) exposes the
+      current generated function and block trail for GDB/TCP capture.
 - [x] Audio output verified from Garden of Edam with an SDL disk capture:
       varying music and tonal peaks, and the Z80 driver is released from reset
       with an advancing PC. (The separate development `--wav` capture path
