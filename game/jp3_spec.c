@@ -23,15 +23,30 @@ static void jp3_call_entry_point(void) { recomp_call_addr(JP3_ENTRY_PC); }
 static void jp3_call_vblank(void)      { recomp_call_addr(JP3_VBLANK_PC); }
 static void jp3_call_hblank(void)      { recomp_call_addr(JP3_HBLANK_PC); }
 
-/* $0B6D88 is an RTS reached after PEA #$0B6DE6. It is a computed jump into
- * the decompressor's epilogue (MOVEM restore + D0 = A5), not a return. */
+/* $0B6D88/$0B6DE4 are RTSes reached after PEA #$0B6DE6. They are computed
+ * jumps into the decompressor's epilogue (MOVEM restore + D0 = A5), not
+ * returns. Perform the epilogue inline so the original JSR wrapper still owns
+ * the return-address pop; calling it through recomp_call_addr() leaves that
+ * slot behind and leaks 4 bytes of guest stack per decompression. */
 static int jp3_instruction_hook(uint32_t pc)
 {
     if (pc == 0x0B6D88u || pc == 0x0B6DE4u) {
         uint32_t target = m68k_read32(g_cpu.A[7]) & 0xFFFFFFu;
         if (target == 0x0B6DE6u) {
-            g_cpu.A[7] += 4;
-            recomp_call_addr(target);
+            uint32_t d0_result = g_cpu.A[5];
+            g_cpu.A[7] += 4;                 /* pop the PEA target */
+            for (int i = 1; i <= 7; i++) {   /* MOVEM.L (A7)+,D1-D7/A0-A5 */
+                g_cpu.D[i] = m68k_read32(g_cpu.A[7]);
+                g_cpu.A[7] += 4;
+            }
+            for (int i = 0; i <= 5; i++) {
+                g_cpu.A[i] = m68k_read32(g_cpu.A[7]);
+                g_cpu.A[7] += 4;
+            }
+            g_cpu.D[0] = d0_result;
+            g_cpu.SR &= (uint16_t)~0x0Fu;
+            if (d0_result == 0) g_cpu.SR |= (1u << 2);
+            if (d0_result >> 31) g_cpu.SR |= (1u << 3);
             return 1;
         }
     }
