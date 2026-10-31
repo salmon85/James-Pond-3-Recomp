@@ -97,7 +97,15 @@ SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
 - [x] 60 Hz (NTSC): the game reads `$A10001 = $80` and sets
       `$FFFD18 = $FF` (export) / `$FFFD19 = $00` (NTSC). The runner pacer is
       59.94 fps.
-- [ ] Full-level progression and audio validated against a trusted emulator.
+- [x] Jump-freeze regression fixed: the decompressor epilogue no longer leaks
+      four bytes of guest stack per call. Cold boot, move/jump/attack, and
+      repeated-jump probes pass with `GENESIS_STRICT_JSR_STACK=1`.
+- [x] Audio output verified from Garden of Edam with an SDL disk capture:
+      varying music and tonal peaks, and the Z80 driver is released from reset
+      with an advancing PC. (The separate development `--wav` capture path
+      still writes a constant offset; normal SDL playback is unaffected.)
+- [ ] Validate full-level progression and later areas against a trusted
+      emulator.
 - [x] The one-frame title/menu logo tear while the menu wipes in is the
       original game's raster transition: the same frame appears in NTSC MAME.
       Stable menu frames and gameplay are clean.

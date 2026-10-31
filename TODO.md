@@ -19,14 +19,26 @@
 - [x] Final-build title/menu transition: the intro text now clears before the
       menu appears, and frames 11080-11620 show a single clean set of
       START/PASSWORD/OPTIONS entries (no five-second duplication).
+- [x] Fix the jump freeze: the PEA/RTS decompressor hook leaked four bytes of
+      guest stack per call until A7 collapsed at `$0B5D54`. The hook now
+      performs the epilogue inline and leaves the return slot to the JSR
+      wrapper.
+- [x] Strict-stack regression: 3,000-frame cold boot, 12,121-frame
+      move/jump/attack probe, and 14,221-frame jump probe all pass with
+      `GENESIS_STRICT_JSR_STACK=1` and no dispatch/floor misses.
+- [x] Audio output verified from the level via SDL disk capture: nonzero,
+      varying music with tonal peaks around 280-500 Hz; the Z80 driver is
+      released from reset and its PC advances.
 
 ## Follow-ups
 
 - [ ] Audit the upstream `$0BD496` computed-dispatch offset that produces the
       misaligned targets, so they can eventually be handled as in-function
       labels instead of declined floor misses.
-- [ ] Validate later areas, enemies, level completion, and audio against NTSC
-      MAME.
+- [ ] Validate later areas, enemies, and level completion against NTSC MAME.
+- [ ] Investigate the development `--wav` capture path, which writes a
+      constant offset; the real SDL output path plays the level audio
+      correctly.
 
 ## Known limitations
 
