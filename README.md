@@ -61,6 +61,19 @@ The runner writes runtime evidence next to the executable:
 `interior_label_misses.toml`. Addresses recorded there are audited and, once
 confirmed against the ROM, promoted into `game/game.toml`.
 
+Repeatable probes live in `tools/`:
+
+```sh
+cd build
+# Boot through the title/menu into Garden of Edam; writes gameplay_*.png
+SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
+  ./JamesPond3Recomp jp3.md --turbo --input-script ../tools/gameplay_probe.input
+
+# Assert the ROM selected NTSC (60 Hz): $FFFD19=0, $FFFD18=$FF
+SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
+  ./JamesPond3Recomp jp3.md --turbo --input-script ../tools/ntsc_check.input
+```
+
 ## Status
 
 - [x] Recompiler builds on Linux; ROM identity verified.

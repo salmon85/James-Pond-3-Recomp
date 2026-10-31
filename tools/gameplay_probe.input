@@ -1,0 +1,17 @@
+# Boot -> title -> menu -> first level (Garden of Edam).
+# Run from the build directory with:
+#   SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
+#     ./JamesPond3Recomp jp3.md --turbo --input-script ../tools/gameplay_probe.input
+WAIT 9000
+PRESS START 6
+WAIT 240
+PRESS START 6
+WAIT 300
+SCREENSHOT gameplay_00.png
+WAIT 300
+SCREENSHOT gameplay_01.png
+WAIT 300
+SCREENSHOT gameplay_02.png
+WAIT 300
+SCREENSHOT gameplay_03.png
+EXIT 0

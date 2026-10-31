@@ -1,0 +1,8 @@
+# Verify the retail ROM selected its NTSC 60 Hz path.
+# $FFFD18 = export flag ($FF), $FFFD19 = PAL flag ($00), $FFFD1A = version.
+# Run from the build directory after the boot/region check has completed.
+WAIT 9000
+ASSERT_RAM8 0xFFFFFD19 0
+ASSERT_RAM8 0xFFFFFD18 0xFF
+SCREENSHOT ntsc_title.png
+EXIT 0
