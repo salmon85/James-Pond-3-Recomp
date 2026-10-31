@@ -47,6 +47,9 @@ void crash_report_record_block(uint32_t block_addr);
  */
 unsigned crash_report_recent_blocks(uint32_t *out, unsigned max, uint32_t *total);
 
+/* Same, but excludes blocks executed inside the atomic V-int/H-int handler. */
+unsigned crash_report_recent_main_blocks(uint32_t *out, unsigned max, uint32_t *total);
+
 /*
  * Load addr→name mappings from a CSV with `addr,name` rows (the
  * gen_annotations_csv.py output). Returns the number of symbols

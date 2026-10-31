@@ -4,6 +4,7 @@
 #include "backend_decls.h"   /* own decls — native builds have no clownmdemu paths */
 #include "include/genesis_host_mem.h"   /* glue_peek* / glue_poke* */
 #include <stdio.h>
+#include <stddef.h>
 #include <stdint.h>
 
 /* Call after machine init and ROM load.
@@ -60,6 +61,16 @@ typedef enum {
     GLUE_YIELD_HALT    = 7,  /* parked forever (interp halt / entry return)  */
 } GlueYieldSite;
 GlueYieldSite glue_yield_site(void);
+
+/* Scheduler/floor probe for the TCP diagnostics surface. Fills `buf` with a
+ * complete JSON response (including `id`) and returns its length. While the
+ * game fiber is suspended this names the yield site and every early-return
+ * gate that could keep it suspended. */
+int glue_sched_info_json(int id, char *buf, size_t cap);
+
+/* Non-zero while the atomic V-int/H-int handler is executing on the main
+ * fiber. `crash_report` uses it to keep the last game-fiber blocks. */
+int glue_in_vblank_service(void);
 
 /* Shutdown: signal game thread to stop (if running). */
 void glue_shutdown(void);

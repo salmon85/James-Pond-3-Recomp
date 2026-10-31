@@ -461,6 +461,8 @@ static uint32_t s_game_fiber_resume_pc = 0;
 static GlueYieldSite s_yield_site = GLUE_YIELD_NONE;
 GlueYieldSite glue_yield_site(void) { return s_yield_site; }
 
+int glue_in_vblank_service(void) { return s_in_vblank_service; }
+
 static void yield_to_main(GlueYieldSite site)
 {
     s_yield_site = site;
@@ -644,6 +646,10 @@ static uint32_t s_main_cpu_stalls;
 static int s_irq_in_progress = 0; /* also excludes interleaved IRQs from acceleration */
 static int32_t s_cycle_budget = 0;
 static int     s_game_yielded_vblank = 0;
+/* Consecutive per-scanline chunks that returned before resuming the game
+ * fiber. A normal WaitForVBla park gates at most one wall frame; thousands
+ * means the fiber is stranded and the scheduler gates are the reason. */
+static unsigned s_resume_stall_frames = 0;
 static int s_state_requested,s_state_parked;
 void glue_state_boundary_request(int requested)
 { s_state_requested=requested; if (!requested) s_state_parked=0; }
@@ -683,20 +689,46 @@ void glue_run_game_chunk(cc_u32f cycles)
 {
     /* An opt-in quicksave completes the native tick, then keeps its WaitForVint
      * parked until this wall frame's VDP/Z80/audio drain has completed. */
-    if (s_state_parked) return;
-    if (!s_game_running || !s_game_fiber)
+    if (s_state_parked) {
+        if (++s_resume_stall_frames == 2000u)
+            fprintf(stderr, "[SCHED-STUCK] state_parked for %u scanline chunks "
+                    "frame=%llu yield_site=%d pc=%06X a7=%06X\n",
+                    s_resume_stall_frames, (unsigned long long)g_frame_count,
+                    (int)s_yield_site, g_cpu.PC & 0xFFFFFFu, g_cpu.A[7] & 0xFFFFFFu);
         return;
-    if (s_game_yielded_vblank)
+    }
+    if (!s_game_running || !s_game_fiber) {
+        if (++s_resume_stall_frames == 2000u)
+            fprintf(stderr, "[SCHED-STUCK] game_running=%d fiber=%p for %u scanline chunks "
+                    "frame=%llu\n", s_game_running, (void *)s_game_fiber,
+                    s_resume_stall_frames, (unsigned long long)g_frame_count);
         return;
+    }
+    if (s_game_yielded_vblank) {
+        if (++s_resume_stall_frames == 2000u)
+            fprintf(stderr, "[SCHED-STUCK] game_yielded_vblank for %u scanline chunks "
+                    "frame=%llu yield_site=%d pc=%06X a7=%06X sr=%04X\n",
+                    s_resume_stall_frames, (unsigned long long)g_frame_count,
+                    (int)s_yield_site, g_cpu.PC & 0xFFFFFFu,
+                    g_cpu.A[7] & 0xFFFFFFu, (unsigned)g_cpu.SR);
+        return;
+    }
 #if SONIC_REVERSE_DEBUG
     /* Tier 2: game fiber has parked at a breakpoint. Keep DoCycles
      * no-opping until Iterate returns to main.c, where rdb_park_drain
      * polls cmd_server until a resume command arrives. Without this
      * gate the yield is effectively a no-op — DoCycles would switch
      * right back into the game fiber on the next chunk. */
-    if (s_game_yielded_break)
+    if (s_game_yielded_break) {
+        if (++s_resume_stall_frames == 2000u)
+            fprintf(stderr, "[SCHED-STUCK] game_yielded_break for %u scanline chunks "
+                    "frame=%llu yield_site=%d pc=%06X a7=%06X\n",
+                    s_resume_stall_frames, (unsigned long long)g_frame_count,
+                    (int)s_yield_site, g_cpu.PC & 0xFFFFFFu, g_cpu.A[7] & 0xFFFFFFu);
         return;
+    }
 #endif
+    s_resume_stall_frames = 0;
 
     /* Pay down interrupt-handler raster debt first: while the 68K is
      * (logically) still inside the V-int/H-int handler, the main loop does
@@ -1937,6 +1969,28 @@ static int is_bra_w_trampoline(uint32_t addr)
 /* Re-entrancy guard for the floor. The interpreter is self-contained (it does
  * not re-enter dispatch), but never recurse the floor defensively. */
 static int s_in_floor = 0;
+
+/* TCP `sched_info`: one line that says whether the game fiber is running,
+ * which gate holds it, and where it will resume. */
+int glue_sched_info_json(int id, char *buf, size_t cap)
+{
+    return snprintf(buf, cap,
+        "{\"id\":%d,\"ok\":true,\"yield_site\":%d,"
+        "\"game_yielded_vblank\":%d,\"state_requested\":%d,"
+        "\"state_parked\":%d,\"in_floor\":%d,\"in_vblank_service\":%d,"
+        "\"irq_in_progress\":%d,\"pending_irq\":%d,\"own_vint_latched\":%d,"
+        "\"game_running\":%d,\"interleave_active\":%d,"
+        "\"cycle_budget\":%d,\"irq_cycle_debt\":%u,\"frame\":%llu,"
+        "\"pc\":%u,\"sr\":%u,\"a7\":%u}",
+        id, (int)s_yield_site,
+        s_game_yielded_vblank, s_state_requested,
+        s_state_parked, s_in_floor, s_in_vblank_service,
+        s_irq_in_progress, s_pending_irq, s_own_vint_latched,
+        s_game_running, s_interleave_active,
+        (int)s_cycle_budget, (unsigned)s_irq_cycle_debt,
+        (unsigned long long)g_frame_count,
+        g_cpu.PC, (unsigned)g_cpu.SR, g_cpu.A[7]);
+}
 
 /* ── Coverage manifest ──────────────────────────────────────────────────────
  * Records every in-ROM address the floor executed (the missed entry + the

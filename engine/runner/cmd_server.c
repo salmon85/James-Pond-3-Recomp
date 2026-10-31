@@ -45,6 +45,7 @@ typedef int sock_t;
 #endif
 
 #include "genesis_runtime.h"
+#include "glue.h"
 
 /* =========================================================================
  * External state we need to inspect
@@ -550,6 +551,32 @@ static void handle_crash_trail(int id)
         pos += (size_t)len;
     }
     memcpy(buf + pos, "]}", 3);
+    send_response(buf);
+}
+
+/* Game-fiber blocks only: the atomic V-int handler floods the full ring. */
+static void handle_crash_trail_main(int id)
+{
+    uint32_t blocks[64], total = 0;
+    unsigned n = crash_report_recent_main_blocks(blocks, 64, &total);
+    char buf[64 * 160 + 128], entry[192];
+    size_t pos = (size_t)snprintf(buf, sizeof buf, "{\"id\":%d,\"ok\":true,\"total\":%" PRIu32 ",\"blocks\":[", id, total);
+    for (unsigned i = 0; i < n; ++i) {
+        const char *name = crash_report_lookup(blocks[i]);
+        int len = snprintf(entry, sizeof entry, "%s{\"addr\":\"%06X\",\"name\":\"%.120s\"}",
+                           i ? "," : "", blocks[i], name ? name : "");
+        if (len < 0 || (size_t)len >= sizeof entry || pos + (size_t)len + 3 > sizeof buf) break;
+        memcpy(buf + pos, entry, (size_t)len);
+        pos += (size_t)len;
+    }
+    memcpy(buf + pos, "]}", 3);
+    send_response(buf);
+}
+
+static void handle_sched_info(int id)
+{
+    char buf[512];
+    glue_sched_info_json(id, buf, sizeof buf);
     send_response(buf);
 }
 
@@ -2156,7 +2183,7 @@ int (*g_cmd_server_online)(void);
 static int online_allowed(const char *cmd)
 {
     static const char *const ok[] = {
-        "ping", "screenshot", "get_registers", "crash_trail", "read_memory", "read_ram", "sonic_history",
+        "ping", "screenshot", "get_registers", "crash_trail", "crash_trail_main", "sched_info", "read_memory", "read_ram", "sonic_history",
         "vblank_info", "frame_info", "frame_range", "addr_history", "read_vram", "read_cram",
         "audio_stats", "frame_performance", "get_frame", "frame_timeseries", "z80_state",
         "read_z80_ram", "fm_state", "psg_state", "vdp_state", "vdp_events", "read_vsram",
@@ -2232,6 +2259,10 @@ static CmdResult dispatch_command(const char *json, uint32_t frame_num)
         handle_get_registers(id);
     } else if (strcmp(cmd, "crash_trail") == 0) {
         handle_crash_trail(id);
+    } else if (strcmp(cmd, "crash_trail_main") == 0) {
+        handle_crash_trail_main(id);
+    } else if (strcmp(cmd, "sched_info") == 0) {
+        handle_sched_info(id);
     } else if (strcmp(cmd, "read_memory") == 0) {
         handle_read_memory(id, json);
     } else if (strcmp(cmd, "write_memory") == 0) {

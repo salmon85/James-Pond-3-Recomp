@@ -33,10 +33,34 @@ static uint32_t s_block_ring[BLOCK_RING_SIZE];
 static uint32_t s_block_head;       /* next write slot, monotonic */
 static uint32_t s_block_total;
 
+/* Game-fiber-only twin of the ring above. The atomic V-int/H-int handler runs
+ * on the main fiber and floods the plain ring with its own blocks every frame;
+ * this one keeps the last main-program blocks visible while the fiber is
+ * stranded (see [SCHED-STUCK]). */
+static uint32_t s_main_block_ring[BLOCK_RING_SIZE];
+static uint32_t s_main_block_head;
+static uint32_t s_main_block_total;
+
+extern int glue_in_vblank_service(void);
+
 void crash_report_record_block(uint32_t block_addr) {
     s_block_ring[s_block_head & (BLOCK_RING_SIZE - 1)] = block_addr;
     s_block_head++;
     s_block_total++;
+    if (!glue_in_vblank_service()) {
+        s_main_block_ring[s_main_block_head & (BLOCK_RING_SIZE - 1)] = block_addr;
+        s_main_block_head++;
+        s_main_block_total++;
+    }
+}
+
+unsigned crash_report_recent_main_blocks(uint32_t *out, unsigned max, uint32_t *total) {
+    uint32_t window = s_main_block_total < BLOCK_RING_SIZE ? s_main_block_total : BLOCK_RING_SIZE;
+    if (window > max) window = max;
+    for (uint32_t i = 0; i < window; i++)
+        out[i] = s_main_block_ring[(s_main_block_head - window + i) & (BLOCK_RING_SIZE - 1)];
+    if (total) *total = s_main_block_total;
+    return window;
 }
 
 unsigned crash_report_recent_blocks(uint32_t *out, unsigned max, uint32_t *total) {
