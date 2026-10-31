@@ -16,6 +16,9 @@
       abort, and no display corruption.
 - [x] Compare the one-frame title/menu logo tear with NTSC MAME: the same
       transition frame exists in the emulator, so it is authentic.
+- [x] Final-build title/menu transition: the intro text now clears before the
+      menu appears, and frames 11080-11620 show a single clean set of
+      START/PASSWORD/OPTIONS entries (no five-second duplication).
 
 ## Follow-ups
 

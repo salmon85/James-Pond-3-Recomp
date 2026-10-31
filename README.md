@@ -101,6 +101,9 @@ SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
 - [x] The one-frame title/menu logo tear while the menu wipes in is the
       original game's raster transition: the same frame appears in NTSC MAME.
       Stable menu frames and gameplay are clean.
+- [x] The early menu/duplicated-entry overlap is gone after removing the
+      invalid object-handler promotions: the intro text now clears first, and
+      stable frames show a single START/PASSWORD/OPTIONS list.
 
 The only audited runtime-driven entries retained are `$0B5B00` (VDP/scroll
 helper) and `$0A8016` (tilemap-blitter jump target). The `$0BD496` object-update
