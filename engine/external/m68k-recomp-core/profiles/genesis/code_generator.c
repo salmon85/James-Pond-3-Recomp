@@ -1973,6 +1973,24 @@ static void emit_instr(FILE *f, const GenesisRom *rom,
         } else {
             fprintf(f, "  if (g_split_sp_popped >= 4) { g_rte_pending = g_split_sp_popped / 4; g_split_sp_popped = 0; }\n");
         }
+        /* A routine can return to an address IT pushed, not to the caller's
+         * JSR slot: e.g. `pea continuation` at entry, then a plain `rts`
+         * (JP3 object behavior $0A65A8 pushes $0A8EFC and rts's back into
+         * the object loop). The C `return` below stands for the normal rts
+         * pop, which the JSR wrapper performs — but when the path left its
+         * own push on the stack, that push is what the rts actually pops.
+         * Pop it here and tail-dispatch to it, leaving the caller's slot for
+         * the wrapper exactly as the hardware leaves it. */
+        {
+            const char *delta = *has_sp_adjust ? "_sp_popped" : "g_split_sp_popped";
+            fprintf(f, "  if (%s <= -4) {\n", delta);
+            fprintf(f, "    uint32_t _rts_cont = m68k_read32(g_cpu.A[7]);\n");
+            fprintf(f, "    g_cpu.A[7] += 4; %s += 4;\n", delta);
+            if (*has_sp_adjust)
+                fprintf(f, "    if (_sp_popped) g_split_sp_popped += _sp_popped;\n");
+            fprintf(f, "    recomp_tail_call(_rts_cont); return;\n");
+            fprintf(f, "  }\n");
+        }
         emit_cycle_accounting(f, "  ", estimate_cycles(instr));
         fprintf(f, "  return;\n");
         *skip_until_label = true;
@@ -2279,7 +2297,9 @@ static void emit_instr(FILE *f, const GenesisRom *rom,
                     seen_offsets[seen_count++] = off;
                     fprintf(f, "    case %d: goto label_%06X;\n", off, pc_targets[t]);
                 } }
-                fprintf(f, "    default: hybrid_jmp_interpret(0x%08Xu + "
+                fprintf(f, "    default: %s", *has_sp_adjust ?
+                        "g_split_sp_popped += _sp_popped; _sp_popped = 0; " : "");
+                fprintf(f, "hybrid_jmp_interpret(0x%08Xu + "
                         "m68k_brief_index_value(0x%04Xu, g_cpu.D[%d], g_cpu.A[%d])); return;\n",
                         base, ext, xreg, xreg);
                 fprintf(f, "  }\n");
@@ -2305,7 +2325,9 @@ static void emit_instr(FILE *f, const GenesisRom *rom,
                     fprintf(f, "    case %d: goto label_%06X;\n",
                             ot_offsets[t], ot_targets[t]);
                 } }
-                fprintf(f, "    default: hybrid_jmp_interpret(0x%08Xu + "
+                fprintf(f, "    default: %s", *has_sp_adjust ?
+                        "g_split_sp_popped += _sp_popped; _sp_popped = 0; " : "");
+                fprintf(f, "hybrid_jmp_interpret(0x%08Xu + "
                         "m68k_brief_index_value(0x%04Xu, g_cpu.D[%d], g_cpu.A[%d])); return;\n",
                         base, ext, xreg, xreg);
                 fprintf(f, "  }\n");
@@ -2316,6 +2338,8 @@ static void emit_instr(FILE *f, const GenesisRom *rom,
                 fprintf(f, "  /* JMP table at $%06X: interpret handler at base $%06X + %s[%d] */\n",
                         instr->addr, base, xr + 6 /* skip "g_cpu." */, xreg);
                 emit_cycle_accounting(f, "  ", estimate_cycles(instr));
+                if (*has_sp_adjust)
+                    fprintf(f, "  g_split_sp_popped += _sp_popped; _sp_popped = 0;\n");
                 fprintf(f, "  hybrid_jmp_interpret(0x%08Xu + "
                         "m68k_brief_index_value(0x%04Xu, g_cpu.D[%d], g_cpu.A[%d]));\n",
                         base, ext, xreg, xreg);
