@@ -101,6 +101,34 @@ late_extra = [
     0x0B5DDC,   # VDP setup epilogue reached by computed dispatch
     0x0B72C8,   # main-loop entry reached by BRA from the state handlers
     0x0A8EFC,   # object-loop continuation: `pea` return target popped by rts
+    # Camonbert Canyon enemy update handlers reached only through the object
+    # behavior tables (the $0A9320 loop's `jsr (a5)`). Each is a real function
+    # entry: the preceding word is RTS/BRA/JMP or data, never a fallthrough.
+    # Without native bodies the tier-3 capsule declines them (its forced
+    # continuation return never matches the native $0A9322 return), so the
+    # enemies never move or take damage. Their internal `jmp (pc,d0.w)`
+    # state ladders are given explicitly too, because the audited late phase
+    # does not run speculative table discovery.
+    0x0A9FC6,   # enemy handler, behavior pointer $0CB43C
+    0x0AC402,   # enemy handler, behavior pointer $0CA9EC
+    0x0AC41A,   # $0AC402 state ladder slot 0 (bra.w)
+    0x0AC41E,   # $0AC402 state ladder slot 1 (bra.w)
+    0x0AC2B6,   # enemy handler, behavior pointer $0CA9B0
+    0x0AC2DA,   # $0AC2B6 state ladder slot 0 (bra.w)
+    0x0AC2DE,   # $0AC2B6 state body reached by the slot 0 bra.w
+    0x0ABA46,   # enemy handler, behavior pointers $0CA2A8 / $0CA398
+    0x0ABA6E,   # $0ABA46 state ladder slot 0 (bra.w)
+    0x0ABA72,   # $0ABA46 state ladder slot 1 (bra.w)
+    0x0ABA76,   # $0ABA46 state ladder slot 2 (bra.w)
+    0x0AC076,   # enemy handler, behavior pointer $0CA884
+    0x0AC08E,   # $0AC076 state ladder slot 0 (bra.w)
+    0x0AC092,   # $0AC076 state ladder slot 1 (bra.w)
+    0x0AB858,   # enemy handler, behavior pointer $0CA230
+    0x0AB87A,   # $0AB858 state ladder slot 0 (bra.w)
+    0x0AB87E,   # $0AB858 state ladder slot 1 (bra.w)
+    0x0AB8EA,   # enemy handler, behavior pointer $0CA26C
+    0x0AB910,   # $0AB8EA state ladder slot 0 (bra.w)
+    0x0AB914,   # $0AB8EA state ladder slot 1 (bra.w)
 ]
 # The $0BD496 object-update cluster produced runtime targets that decode to
 # mid-instruction operands ($0BD4A8, $0BD524, $0BD528, $0BD618). They are return
