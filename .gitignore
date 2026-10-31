@@ -1,5 +1,6 @@
 # Build output
 /build/
+/build-*/
 /engine/build/
 
 # Local scratch / emulator captures
