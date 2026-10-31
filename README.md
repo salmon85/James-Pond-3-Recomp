@@ -72,6 +72,10 @@ SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
 # Assert the ROM selected NTSC (60 Hz): $FFFD19=0, $FFFD18=$FF
 SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
   ./JamesPond3Recomp jp3.md --turbo --input-script ../tools/ntsc_check.input
+
+# Exercise movement, jumping, and tongue attacks in Garden of Edam
+SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
+  ./JamesPond3Recomp jp3.md --turbo --input-script ../tools/move_attack_probe.input
 ```
 
 ## Status
@@ -82,11 +86,24 @@ SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
       path, EA logo, intro story, title screen, and menu.
 - [x] First gameplay level ("Garden of Edam") renders with terrain, HUD,
       player sprite, camera, and working input.
+- [x] Movement, jumping, tongue attack, and object/state-table handlers are
+      native; the move/attack corruption seen in early runs is fixed by the
+      audited `late_extra` entries below.
 - [x] 60 Hz (NTSC): the game reads `$A10001 = $80` and sets
       `$FFFD18 = $FF` (export) / `$FFFD19 = $00` (NTSC). The runner pacer is
       59.94 fps.
 - [ ] Full-level progression and audio validated against a trusted emulator.
-- [ ] Remaining evidence-driven discovery gaps audited (see runtime files).
+- [ ] One known cosmetic artifact remains: the title/menu raster transition
+      can tear the logo for a single frame while the menu wipes in; the stable
+      menu frames and gameplay are clean. This looks like the game's own
+      raster/scroll transition rather than corrupted state.
+
+The audited runtime-driven entries are in `[functions].late_extra` in
+`game/game.toml` (`$0A8016`, `$0BD4A8`, `$0BD524`, `$0BD528`, `$0BD544`,
+`$0BD59C`, `$0BD5BC`, `$0BD620`). They were reached by computed dispatch in
+Garden of Edam; before they were promoted, the interpreter floor left the
+object state partially updated and the display could collapse into VRAM
+garbage.
 
 ## Layout
 

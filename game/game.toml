@@ -69,5 +69,19 @@ extra = [
     0x09FA3C,   # H-int scroll setup helper called from $09FA16's cluster
     0x0A7F2E,   # static JMP (A4) target in the level tilemap blitter
 ]
-late_extra = []
+# Audited runtime-evidence entries. These are computed-call/state-table
+# targets seen in dispatch_misses.toml / floor_coverage.toml while moving,
+# jumping, and attacking in Garden of Edam. Kept late so they cannot
+# recursively reopen heuristic discovery.
+late_extra = [
+    0x0B5B00,   # VDP/scroll helper (dispatch miss)
+    0x0A8016,   # JMP (A4) tilemap-blitter target
+    0x0BD4A8,   # object-update entry reached from the state table
+    0x0BD524,   # object-update interior target
+    0x0BD528,   # object-update interior target
+    0x0BD544,   # object-update dispatch target
+    0x0BD59C,   # object-update helper
+    0x0BD5BC,   # object-update helper
+    0x0BD620,   # object-update state label
+]
 blacklist = []
