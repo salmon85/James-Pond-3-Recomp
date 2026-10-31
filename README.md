@@ -93,10 +93,9 @@ SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
       `$FFFD18 = $FF` (export) / `$FFFD19 = $00` (NTSC). The runner pacer is
       59.94 fps.
 - [ ] Full-level progression and audio validated against a trusted emulator.
-- [ ] One known cosmetic artifact remains: the title/menu raster transition
-      can tear the logo for a single frame while the menu wipes in; the stable
-      menu frames and gameplay are clean. This looks like the game's own
-      raster/scroll transition rather than corrupted state.
+- [x] The one-frame title/menu logo tear while the menu wipes in is the
+      original game's raster transition: the same frame appears in NTSC MAME.
+      Stable menu frames and gameplay are clean.
 
 The audited runtime-driven entries are in `[functions].late_extra` in
 `game/game.toml` (`$0A8016`, `$0BD4A8`, `$0BD524`, `$0BD528`, `$0BD544`,
