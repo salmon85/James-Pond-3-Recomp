@@ -76,6 +76,7 @@ extra = [
 late_extra = [
     0x0B5B00,   # VDP/scroll helper (dispatch miss)
     0x0A8016,   # JMP (A4) tilemap-blitter target
+    0x0B5D54,   # VDP setup continuation reached by computed dispatch
 ]
 # The $0BD496 object-update cluster produced runtime targets that decode to
 # mid-instruction operands ($0BD4A8, $0BD524, $0BD528, $0BD618). They are return
