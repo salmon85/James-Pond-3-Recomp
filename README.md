@@ -110,6 +110,10 @@ SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
 - [x] Frog/sky state corruption fixed: the `$0B5AE6` VDP dispatcher's table
       targets `$0B5AF4`, `$0B5AF8`, and `$0B5AFC` are native, so the level
       update no longer runs through an A7-neutral floor capsule.
+- [x] `$0BD424` object-state dispatch clamped to its five valid table entries;
+      a corrupted `FCF4` no longer jumps into instruction operands. A
+      5,321-frame active-play run completed with zero unique dispatch misses
+      and no freeze.
 - [x] Optional reverse-debug build (`-DSONIC_REVERSE_DEBUG=ON`) exposes the
       current generated function and block trail for GDB/TCP capture.
 - [x] Audio output verified from Garden of Edam with an SDL disk capture:

@@ -44,6 +44,11 @@
       `$0B5AF4`, `$0B5AF8`, and `$0B5AFC` so the whole table is native.
 - [x] 60-second audio-enabled Garden of Edam idle with strict JSR stack checks
       completes with no floor or dispatch misses.
+- [x] Clamped the `$0BD424` object-state dispatch to its five-entry table;
+      corrupted FCF4 values no longer jump into instruction operands
+      (`$0BD524`/`$0BD618`).
+- [x] 5,321-frame active movement/jumping/attacking run (debug build) with
+      zero unique dispatch misses, no floor/illegal events, and no freeze.
 
 ## Follow-ups
 
