@@ -1255,6 +1255,8 @@ int runner_load_state_file(const char *path)
     if (ok && !exact_resume) audio_event_queue_reset();
 
     if (ok && !exact_resume) {
+        if (g_game_spec.portable_load_fixup)
+            g_game_spec.portable_load_fixup();
         /* Mode-aware resume: re-enter at the restored Game_Mode's per-frame
          * loop top (moment-in-time) when the game maps one; otherwise fall
          * back to the outer dispatcher (mode-handler re-entry / reload). */

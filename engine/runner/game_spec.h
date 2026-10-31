@@ -147,6 +147,14 @@ typedef struct GameSpec {
      * behavior. */
     uint32_t    resume_main_loop_pc;
 
+    /* Called only when a portable (cross-process/legacy) save is about to
+     * restart the game fiber at resume_main_loop_pc. Gives the game adapter a
+     * chance to repair state that is only transiently valid at the original
+     * yield point (interrupt masks, partially updated object slots) and would
+     * deadlock or dispatch into a halt if re-entered at the loop top. Exact
+     * same-process fiber resumes bypass this. NULL = no repair needed. */
+    void      (*portable_load_fixup)(void);
+
     /* Mode-aware save-state resume (preferred over resume_main_loop_pc
      * when present). Receives the RESTORED Game_Mode byte and returns
      * the per-frame loop-top PC for that mode (e.g. Sonic 3's LevelLoop

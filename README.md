@@ -136,6 +136,11 @@ fiber at the main-loop entry (`$0B72C8`).
       snapshot instead of restarting at a guessed main-loop PC. 20
       consecutive loads of one save each restored the exact yield point and
       advanced the game; no watchdog, dispatch, or illegal-opcode events.
+- [x] Saves written by another process (or an older build) fall back to the
+      portable RAM/VDP restore plus a main-loop restart. James Pond 3 repairs
+      its interrupt mask and frees transient object slots at load time, so
+      these saves no longer deadlock in `WaitForVint`; the original save file
+      is not modified.
 - [x] Optional reverse-debug build (`-DSONIC_REVERSE_DEBUG=ON`) exposes the
       current generated function and block trail for GDB/TCP capture.
 - [x] Audio output verified from Garden of Edam with an SDL disk capture:

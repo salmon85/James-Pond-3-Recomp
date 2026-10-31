@@ -74,9 +74,18 @@
 
 ## Follow-ups
 
-- [ ] Cross-process/older save loads still fall back to restarting the game
-      fiber at `$0B72C8`, which can mismatch map vs. level mode. Decode the
-      guest stack into a restorable guest state to remove the fallback.
+- [x] Cross-process/older save loads fall back to restarting the game fiber
+      at `$0B72C8`; the James Pond 3 adapter now clears a saved interrupt
+      mask and frees transient object slots on that path so the load no
+      longer deadlocks in `WaitForVint`. Same-process loads still take the
+      exact-fiber path. The user's slot-1 save is unchanged by loading.
+- [ ] Enemy-fired apples spin in place while player-fired apples fly
+      normally. Reproduce from the recovered save, compare projectile
+      initialization for the two owners, and promote/fix the responsible
+      handler.
+- [ ] Cross-process/older save loads still mismatch map vs. level mode; the
+      mini-map may not return until the next transition. Decode the guest
+      stack into a restorable guest state to remove the fallback.
 - [ ] Audit the upstream `$0BD496` computed-dispatch offset that produces the
       misaligned targets, so they can eventually be handled as in-function
       labels instead of declined floor misses.
@@ -92,5 +101,6 @@
 - The ROM is user-supplied and is not tracked by Git.
 - Save files are only exact-resume in the process that wrote them; a save
   loaded by another process (or an older build) restores RAM/VDP and
-  restarts the fiber at `$0B72C8`.
+  restarts the fiber at `$0B72C8`, with game-specific transient-state
+  repair.
 - The title/menu wipe is a raster transition; stable menu frames are clean.

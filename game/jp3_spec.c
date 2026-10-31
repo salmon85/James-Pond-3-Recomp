@@ -14,6 +14,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #define JP3_ENTRY_PC   0x000200u
 #define JP3_HBLANK_PC  0xFFFFFD0Au
@@ -77,6 +78,32 @@ static int jp3_instruction_hook(uint32_t pc)
     return 0;
 }
 
+/* Portable (cross-process/legacy) loads restart the game fiber at the
+ * main-loop top instead of resuming the saved host stack. A save captured in
+ * an interrupt-masked transition then deadlocks in WaitForVint ($0B620E):
+ * $FC0E stays clear because V-int never runs, and the loop at $0B6224 spins
+ * forever. Transient object slots with type 0-3 are also only meaningful at
+ * the captured yield; the main-loop scan dispatches them through the
+ * $0A8F56 table into the VDP halt at $0B6D20. Re-enable interrupts and free
+ * those slots before the restart. Same-process exact resumes skip this. */
+static void jp3_portable_load_fixup(void)
+{
+    uint16_t old_sr = g_cpu.SR;
+    g_cpu.SR &= (uint16_t)~0x0700u;   /* V-int/H-int enabled again */
+
+    int freed = 0;
+    if (g_ram[0xFCEC] == 0xFF && g_ram[0xFCED] == 0xFF &&
+        g_ram[0xFCEE] == 0xFA && g_ram[0xFCEF] == 0x06) {
+        for (unsigned i = 0; i < 32; i++) {
+            uint8_t *type = &g_ram[0x46ACu + i * 0x82u + 0x1Eu];
+            if (*type < 4) { *type = 0xFF; freed++; }
+        }
+    }
+    if (old_sr != g_cpu.SR || freed)
+        fprintf(stderr, "[LOAD] portable fixup: SR %04X->%04X, freed %d transient slots\n",
+                (unsigned)old_sr, (unsigned)g_cpu.SR, freed);
+}
+
 const GameSpec g_game_spec = {
     .display_name           = "James Pond 3: Operation Starfish",
     .short_name             = "JP3",
@@ -102,6 +129,7 @@ const GameSpec g_game_spec = {
     .save_resume_pc         = NULL,
     .dispatch_main_loop_pc  = 0u,
     .call_periodic          = NULL,
+    .portable_load_fixup    = jp3_portable_load_fixup,
 
     .on_post_reset          = NULL,
     .on_frame_pre           = NULL,
