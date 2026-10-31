@@ -129,6 +129,16 @@ late_extra = [
     0x0AB8EA,   # enemy handler, behavior pointer $0CA26C
     0x0AB910,   # $0AB8EA state ladder slot 0 (bra.w)
     0x0AB914,   # $0AB8EA state ladder slot 1 (bra.w)
+    # Common projectile/enemy behavior entries and their jump-table targets,
+    # seen as interior-label misses while fired apples and white orbs sat
+    # still. Each target decodes to a real instruction, so promote it instead
+    # of letting the tier-3 capsule run the handler.
+    0x0ABB3A,   # $0CA318 behavior entry (projectile state)
+    0x0ABBC2,   # $0CA354 behavior entry (projectile state)
+    0x0AB854,   # `jmp $0A9484` trampoline entry used by projectile states
+    0x0B0C64,   # collision/offset helper reached through a data pointer
+    0x0A9494,   # $0A9490 state-ladder slot 0 (bra.w)
+    0x0B76B8,   # $0B76B0 state-ladder slot 1 (bra.w)
 ]
 # The $0BD496 object-update cluster produced runtime targets that decode to
 # mid-instruction operands ($0BD4A8, $0BD524, $0BD528, $0BD618). They are return

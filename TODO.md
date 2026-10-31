@@ -79,10 +79,12 @@
       mask and frees transient object slots on that path so the load no
       longer deadlocks in `WaitForVint`. Same-process loads still take the
       exact-fiber path. The user's slot-1 save is unchanged by loading.
-- [ ] Enemy-fired apples spin in place while player-fired apples fly
-      normally. Reproduce from the recovered save, compare projectile
-      initialization for the two owners, and promote/fix the responsible
-      handler.
+- [x] Enemy-fired apples/orbs sat still because their behavior entries
+      surfaced only through computed dispatch (`$0ABB3A`, `$0ABBC2`,
+      `$0AB854`, `$0B0C64`, `$0A9494`, `$0B76B8`) and were being run by the
+      Tier-3 capsule. Promoted them to native entries; a single load now
+      reports no interior-label or dispatch misses, and manual repeated-load
+      testing keeps enemies and projectiles moving.
 - [ ] Cross-process/older save loads still mismatch map vs. level mode; the
       mini-map may not return until the next transition. Decode the guest
       stack into a restorable guest state to remove the fallback.
