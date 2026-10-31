@@ -29,6 +29,10 @@
 - [x] Audio output verified from the level via SDL disk capture: nonzero,
       varying music with tonal peaks around 280-500 Hz; the Z80 driver is
       released from reset and its PC advances.
+- [x] Promote the `$0B5D54` VDP setup continuation to native code instead of
+      the A7-neutral tier-3 capsule; the capsule was responsible for the
+      `A7=$22` freeze. A 60-second audio-enabled idle in Garden of Edam now
+      completes with `GENESIS_STRICT_JSR_STACK=1`.
 
 ## Follow-ups
 

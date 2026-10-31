@@ -100,6 +100,10 @@ SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
 - [x] Jump-freeze regression fixed: the decompressor epilogue no longer leaks
       four bytes of guest stack per call. Cold boot, move/jump/attack, and
       repeated-jump probes pass with `GENESIS_STRICT_JSR_STACK=1`.
+- [x] Level-freeze regression fixed: the `$0B5D54` VDP setup continuation is
+      now a native generated function. The former tier-3 capsule framed it
+      A7-neutrally and exited at `A7=$22`; a 60-second audio-enabled idle in
+      Garden of Edam now completes without a freeze.
 - [x] Audio output verified from Garden of Edam with an SDL disk capture:
       varying music and tonal peaks, and the Z80 driver is released from reset
       with an advancing PC. (The separate development `--wav` capture path
