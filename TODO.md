@@ -60,6 +60,8 @@
       freeze.
 - [x] Add a game-fiber-only block trail (`crash_trail_main`), `sched_info`,
       and `[SCHED-STUCK]` logging to the reverse-debug surface.
+- [x] Live validation: both prior freeze locations now complete, including
+      the hidden trigger that spawns the extra moons; no crash or stall.
 
 ## Follow-ups
 
