@@ -49,6 +49,17 @@ kind = "game_hook"
 addr = 0x0B6DE4
 kind = "game_hook"
 
+# The Z80 bus-request helper must not be interrupted between its request write
+# and ACK poll: a V/H interrupt can run the matching release and leave the
+# helper spinning forever. Mask interrupts for the helper's short body.
+[[widescreen_site]]
+addr = 0x0B6FA2
+kind = "game_hook"
+
+[[widescreen_site]]
+addr = 0x0B6FB8
+kind = "game_hook"
+
 [functions]
 # Vector-table seeds are automatic; the game entry reached by the stock init
 # routine's JSR is listed explicitly because it is the real main routine.

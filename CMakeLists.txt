@@ -37,9 +37,13 @@ foreach(_inc IN LISTS SDL2_INCLUDE_DIRS)
     endif()
 endforeach()
 
+option(SONIC_REVERSE_DEBUG
+    "Enable generated-function block tracing and rdb_* TCP commands" OFF)
+
 include("${RECOMP_ROOT}/cmake/GenesisRecompGenerated.cmake")
 genesisrecomp_add_generated_sources(
-    JP3_GENERATED_SOURCES jp3 "${CMAKE_CURRENT_SOURCE_DIR}/game" jp3.md)
+    JP3_GENERATED_SOURCES jp3 "${CMAKE_CURRENT_SOURCE_DIR}/game" jp3.md
+    REVERSE_DEBUG "${SONIC_REVERSE_DEBUG}")
 
 genesisrecomp_runner_sources(JP3_RUNNER_SOURCES TRACE ON)
 
@@ -50,12 +54,17 @@ add_executable(JamesPond3Recomp
 )
 
 add_dependencies(JamesPond3Recomp ${JP3_GENERATED_SOURCES_TARGET})
+if(SONIC_REVERSE_DEBUG)
+    target_sources(JamesPond3Recomp PRIVATE
+        "${RUNNER_ROOT}/reverse_debug.c")
+endif()
 target_compile_definitions(JamesPond3Recomp PRIVATE
     INCLUDE_GENERATED_CODE=1
     ENABLE_RECOMPILED_CODE=1
     OWN_BACKEND=1
     DEFAULT_DEBUG_PORT=4382
     GENESIS_GAME_VERSION="${PROJECT_VERSION}"
+    $<$<BOOL:${SONIC_REVERSE_DEBUG}>:SONIC_REVERSE_DEBUG=1>
 )
 # Keep symbols available for source-level bring-up debugging.
 target_compile_options(JamesPond3Recomp PRIVATE -g)

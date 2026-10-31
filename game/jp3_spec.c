@@ -23,6 +23,14 @@ static void jp3_call_entry_point(void) { recomp_call_addr(JP3_ENTRY_PC); }
 static void jp3_call_vblank(void)      { recomp_call_addr(JP3_VBLANK_PC); }
 static void jp3_call_hblank(void)      { recomp_call_addr(JP3_HBLANK_PC); }
 
+/* The Z80 bus helper at $0B6FA2 writes the request and then polls the ACK.
+ * If a V/H interrupt runs between those two steps, its own bus release can
+ * clear our request and the poll spins forever. Mask interrupts only for the
+ * helper body and restore just the mask bits at its RTS (flags from the body
+ * stay intact). */
+static uint16_t s_busreq_sr;
+static int s_busreq_depth;
+
 /* $0B6D88/$0B6DE4 are RTSes reached after PEA #$0B6DE6. They are computed
  * jumps into the decompressor's epilogue (MOVEM restore + D0 = A5), not
  * returns. Perform the epilogue inline so the original JSR wrapper still owns
@@ -30,6 +38,17 @@ static void jp3_call_hblank(void)      { recomp_call_addr(JP3_HBLANK_PC); }
  * slot behind and leaks 4 bytes of guest stack per decompression. */
 static int jp3_instruction_hook(uint32_t pc)
 {
+    if (pc == 0x0B6FA2u) {
+        if (s_busreq_depth++ == 0)
+            s_busreq_sr = g_cpu.SR;
+        g_cpu.SR |= 0x0700u;              /* mask IPL 1-7 */
+        return 0;
+    }
+    if (pc == 0x0B6FB8u) {
+        g_cpu.SR = (uint16_t)((g_cpu.SR & ~0x0700u) | (s_busreq_sr & 0x0700u));
+        if (s_busreq_depth > 0) s_busreq_depth--;
+        return 0;
+    }
     if (pc == 0x0B6D88u || pc == 0x0B6DE4u) {
         uint32_t target = m68k_read32(g_cpu.A[7]) & 0xFFFFFFu;
         if (target == 0x0B6DE6u) {
