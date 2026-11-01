@@ -3721,6 +3721,11 @@ session_begin:;
             runner_sram_autosave_tick(frame_num);
 
         FRAME_PHASE(5);
+        /* A Wayland compositor stops sending frame callbacks to a minimized
+         * window, so the vsynced present blocks and throttles the whole
+         * simulation (and its audio). Skip the swap while minimized;
+         * simulation and pacing keep running at full speed. */
+        int iconified = (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED) != 0;
         /* Upload framebuffer to GPU texture. When a present-time color model
          * is enabled, transform a COPY into s_present_buf and upload that —
          * s_framebuf (the verified/hashed raw VDP output) is never modified. */
@@ -3824,7 +3829,8 @@ session_begin:;
                 genesis_host_wait_until(deadline, perf_frequency);
         }
         FRAME_PHASE(8);
-        SDL_RenderPresent(renderer);
+        if (!iconified)
+            SDL_RenderPresent(renderer);
 #if GENESIS_HAS_RECOMP_NET
         if (!genesis_netplay_active())
 #endif
