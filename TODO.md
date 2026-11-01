@@ -153,3 +153,11 @@
   restarts the fiber in the loop that was running (`$0A1E5E` map,
   `$0B72C8` level), with game-specific transient-state repair.
 - The title/menu wipe is a raster transition; stable menu frames are clean.
+
+## Final step
+
+- [ ] Create a standalone setup/builder program that asks the user for the
+      game ROM, verifies it against the expected SHA-1/CRC, and then builds
+      the game. If needed, copy the ROM into a `game` folder stored under
+      `%APPDATA%\<game>` on Windows or `~/.config/<game>` on Linux.
+      Keep this item last: any new todo entries go above it.
