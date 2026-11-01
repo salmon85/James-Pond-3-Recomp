@@ -25,7 +25,9 @@ output_prefix = "jp3"
 jump_table_autodiscovery = true
 
 [ram_layout]
-game_mode      = 0x000000     # unknown — cosmetic until reverse-engineered
+# $FFFF2799 is clear on the map/overworld and $FF while a level is running.
+# Save-state resume uses it to pick the loop that was actually executing.
+game_mode      = 0xFFFF2799
 vint_runcount  = 0x000000     # unknown
 vint_routine   = 0x000000     # unknown
 plc_pending    = 0x000000     # no Sonic-style PLC system

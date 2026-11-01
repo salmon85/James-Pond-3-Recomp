@@ -84,12 +84,19 @@ static int jp3_instruction_hook(uint32_t pc)
  * $FC0E stays clear because V-int never runs, and the loop at $0B6224 spins
  * forever. Transient object slots with type 0-3 are also only meaningful at
  * the captured yield; the main-loop scan dispatches them through the
- * $0A8F56 table into the VDP halt at $0B6D20. Re-enable interrupts and free
- * those slots before the restart. Same-process exact resumes skip this. */
+ * $0A8F56 table into the VDP halt at $0B6D20. Re-enable interrupts, restore
+ * the VDP port register, and free those slots before the restart. Same-process
+ * exact resumes skip this. */
 static void jp3_portable_load_fixup(void)
 {
     uint16_t old_sr = g_cpu.SR;
     g_cpu.SR &= (uint16_t)~0x0700u;   /* V-int/H-int enabled again */
+
+    /* The per-frame loop assumes A6 still holds the VDP data port. A save
+     * captured inside a routine that borrowed A6 as scratch otherwise writes
+     * VDP commands into WRAM and spins forever on the DMA-busy poll at
+     * $0B5EA0. */
+    g_cpu.A[6] = 0x00C00000u;
 
     int freed = 0;
     if (g_ram[0xFCEC] == 0xFF && g_ram[0xFCED] == 0xFF &&
@@ -102,6 +109,17 @@ static void jp3_portable_load_fixup(void)
     if (old_sr != g_cpu.SR || freed)
         fprintf(stderr, "[LOAD] portable fixup: SR %04X->%04X, freed %d transient slots\n",
                 (unsigned)old_sr, (unsigned)g_cpu.SR, freed);
+}
+
+/* Portable saves resume in the loop that was actually running. $0A1E5E is
+ * the map/overworld loop; $FFFF2799 is $FF once a level is active, and the
+ * in-level per-frame update lives in the $0B72C8 mode loop (it dispatches the
+ * player state machine at $0B758C). Resuming a level save at $0A1E5E leaves it
+ * in the map's display-only branch, so the player, enemies and object slots
+ * all freeze while the screen keeps being rebuilt from stale data. */
+static uint32_t jp3_save_resume_pc(uint8_t game_mode)
+{
+    return game_mode ? 0x0B72C8u : 0x0A1E5Eu;
 }
 
 const GameSpec g_game_spec = {
@@ -121,13 +139,11 @@ const GameSpec g_game_spec = {
     .call_vblank            = jp3_call_vblank,
     .call_hblank            = jp3_call_hblank,
 
-    /* $0A1E5E is the steady-state frame-loop top (the loop that ends with
-     * `bra $0A1E5E`). Saves are captured at the WaitForVint yield inside this
-     * loop, so re-entering here resumes map and level states alike. The old
-     * $0B72C8 entry re-ran mode init and broke cross-process map saves.
-     * Same-process saves restore the suspended fiber snapshot and skip this. */
+    /* Fallback for portable loads: the map/overworld frame loop. Level saves
+     * are routed to $0B72C8 by save_resume_pc. Same-process saves restore the
+     * suspended fiber snapshot and skip both. */
     .resume_main_loop_pc    = 0x0A1E5Eu,
-    .save_resume_pc         = NULL,
+    .save_resume_pc         = jp3_save_resume_pc,
     .dispatch_main_loop_pc  = 0u,
     .call_periodic          = NULL,
     .portable_load_fixup    = jp3_portable_load_fixup,

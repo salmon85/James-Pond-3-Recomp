@@ -91,9 +91,11 @@ session that wrote it restores the exact yield point — same game mode, frame
 position, scheduler state and pending work — so repeated loads are
 deterministic. Saves from another process or an older build lack a usable
 fiber-stack mapping; they restore the portable image and restart the game
-fiber at the steady-state frame loop (`$0A1E5E`), which resumes map and level
-states alike. (The old `$0B72C8` dispatcher entry re-ran mode init and broke
-cross-process map saves.)
+fiber in the loop that was actually running: `$0A1E5E` for the
+map/overworld, `$0B72C8` for a level. The adapter picks between them from
+`$FFFF2799` (clear on the map, `$FF` in a level). It also restores the
+interrupt mask, the VDP data-port register A6, and transient object slots
+before the restart, so a save captured mid-transition does not deadlock.
 
 ## Status
 
@@ -139,11 +141,12 @@ cross-process map saves.)
       consecutive loads of one save each restored the exact yield point and
       advanced the game; no watchdog, dispatch, or illegal-opcode events.
 - [x] Saves written by another process (or an older build) fall back to the
-      portable RAM/VDP restore plus a restart at the steady-state frame loop
-      (`$0A1E5E`). Map saves resume on the map and level saves resume
-      in-level; James Pond 3 also repairs its interrupt mask and frees
-      transient object slots at load time. The original save file is not
-      modified.
+      portable RAM/VDP restore. The resume loop is mode-aware: map saves
+      restart at `$0A1E5E`, level saves at `$0B72C8`. Resuming a level save
+      at the map loop left the player, enemies and object slots frozen while
+      the screen kept rebuilding from stale data. James Pond 3 also repairs
+      its interrupt mask, the VDP data-port register A6, and transient
+      object slots at load time. The original save file is not modified.
 - [x] Optional reverse-debug build (`-DSONIC_REVERSE_DEBUG=ON`) exposes the
       current generated function and block trail for GDB/TCP capture.
 - [x] Audio output verified from Garden of Edam with an SDL disk capture:

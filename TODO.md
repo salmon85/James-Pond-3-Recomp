@@ -87,10 +87,20 @@
       testing keeps enemies and projectiles moving.
 - [x] Cross-process/older map saves resumed at the mode dispatcher
       (`$0B72C8`), which re-ran level entry and left the map scrolling into a
-      bogus level slice. Portable loads now restart at the steady-state frame
-      loop (`$0A1E5E`), so map saves stay on the map and level saves stay
-      in-level. Verified map movement, 15 repeated loads, strict JSR stacks,
-      and the map-to-level transition.
+      bogus level slice. Portable loads are now mode-aware: map saves restart
+      at `$0A1E5E`, level saves at `$0B72C8`. Resuming a level save at
+      `$0A1E5E` kept the map's display-only branch running, so the player
+      stayed in its saved attack pose with `+0x79=$FF`, enemies stayed
+      invulnerable, and object slots stopped expiring. Verified map movement,
+      repeated loads, strict JSR stacks, and the map-to-level transition.
+- [x] Slot 3 (a save taken after the leaked object burst) froze in the VDP
+      DMA wait at `$0B5EA0`. Its saved A6 was a scratch pointer
+      (`$FFFFD7D8`) rather than the VDP data port (`$00C00000`), so the
+      resumed loop wrote VDP commands into WRAM and polled a WRAM word
+      forever. The portable-load repair now restores A6; slot 3's 32 leaked
+      objects expire back to 9 and the player state machine runs.
+- [ ] Fix the near-zero FPS and robotic audio while the window is minimized
+      (map and level). Suspect the pacer/render/audio path, not save state.
 - [ ] Audit the upstream `$0BD496` computed-dispatch offset that produces the
       misaligned targets, so they can eventually be handled as in-function
       labels instead of declined floor misses.
@@ -106,6 +116,6 @@
 - The ROM is user-supplied and is not tracked by Git.
 - Save files are only exact-resume in the process that wrote them; a save
   loaded by another process (or an older build) restores RAM/VDP and
-  restarts the fiber at the steady-state frame loop `$0A1E5E`, with
-  game-specific transient-state repair.
+  restarts the fiber in the loop that was running (`$0A1E5E` map,
+  `$0B72C8` level), with game-specific transient-state repair.
 - The title/menu wipe is a raster transition; stable menu frames are clean.
