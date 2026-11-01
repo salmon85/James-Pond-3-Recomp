@@ -292,5 +292,8 @@ const char *gvdp_plane_implementation(void);
  * of interrupts that should fire this line. */
 enum { GVDP_IRQ_HBLANK = 1, GVDP_IRQ_VBLANK = 2 };
 unsigned gvdp_begin_scanline(GVDP *v, int line);
+/* Current reg[0] H-int enable, re-read at delivery: the 68K may clear it
+ * between the start of the line and HBlank. */
+int gvdp_hint_enabled(const GVDP *v);
 
 #endif /* GENESIS_VDP_H */

@@ -480,6 +480,8 @@ unsigned gvdp_begin_scanline(GVDP *v, int line)
     return irq;
 }
 
+int gvdp_hint_enabled(const GVDP *v) { return MODE1_HINT_ON(v) ? 1 : 0; }
+
 /* ---- Rendering ------------------------------------------------------------ */
 /* Per-scanline sprite layer, filled by the sprite engine and read by the
  * compositor below. */

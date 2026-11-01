@@ -14,8 +14,13 @@
 - [x] Re-run the 14,221-frame jump probe: no crash and no misses.
 - [x] Live 200-action move/jump/attack fuzz: no unique dispatch misses, no
       abort, and no display corruption.
-- [x] Compare the one-frame title/menu logo tear with NTSC MAME: the same
-      transition frame exists in the emulator, so it is authentic.
+- [x] Fix the title-menu duplication (earlier MAME-based "authentic" claim
+      was wrong). The title code clears reg[0] bit 4 and writes VSRAM[1]=0 at
+      `$09F71A`, but the scanline scheduler still delivered the H-blank
+      interrupt it had latched at line start; the `$09FA16` handler then
+      restored a stale `$03AA` plane-B scroll and drew a second menu for the
+      60-frame window. H-int enable is now re-read at delivery. Frames
+      10704-10762 show one menu and the logo fly-in is unchanged.
 - [x] Final-build title/menu transition: the intro text now clears before the
       menu appears, and frames 11080-11620 show a single clean set of
       START/PASSWORD/OPTIONS entries (no five-second duplication).
@@ -142,17 +147,6 @@
 - [ ] Investigate the development `--wav` capture path, which writes a
       constant offset; the real SDL output path plays the level audio
       correctly.
-
-## Known limitations
-
-- Generated C is a build artifact; never hand-edit it. Fix `game.toml`,
-  discovery seeds, or the runtime instead.
-- The ROM is user-supplied and is not tracked by Git.
-- Save files are only exact-resume in the process that wrote them; a save
-  loaded by another process (or an older build) restores RAM/VDP and
-  restarts the fiber in the loop that was running (`$0A1E5E` map,
-  `$0B72C8` level), with game-specific transient-state repair.
-- The title/menu wipe is a raster transition; stable menu frames are clean.
 
 ## Final step
 
