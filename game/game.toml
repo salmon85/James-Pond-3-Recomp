@@ -141,6 +141,12 @@ late_extra = [
     0x0AB854,   # `jmp $0A9484` trampoline entry used by projectile states
     0x0B0C64,   # collision/offset helper reached through a data pointer
     0x0A9494,   # $0A9490 state-ladder slot 0 (bra.w)
+    # Charged-shot state pair reached from the $0C9E34 pointer table. The
+    # tier-3 capsule declines $0A9ACC (its $0A8EFC continuation return never
+    # matches the native $0A9322 return), leaving the shot frozen in the air
+    # and blocking further fire until the slot is destroyed.
+    0x0A9A6A,   # charged-shot state entry, pointer pair at $0C9E34
+    0x0A9ACC,   # charged-shot state entry, pointer pair at $0C9E34
     0x0B76B8,   # $0B76B0 state-ladder slot 1 (bra.w)
 ]
 # The $0BD496 object-update cluster produced runtime targets that decode to

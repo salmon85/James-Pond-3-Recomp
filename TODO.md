@@ -129,6 +129,12 @@
       controller mappings. Slot 1 then reported A/B/C edges and showed jump
       and attack on screen; saves 2 and 4 still ran 40 s animated in release
       and debug with no unrunnable RAM code.
+- [x] A fully charged jetpack shot could freeze in the air and block further
+      fire. The shot's state pair `$0A9A6A`/`$0A9ACC` (pointer table
+      `$0C9E34`) was reached only by computed dispatch, so the tier-3 capsule
+      ran `$0A9ACC` and declined it (`exit_pc=$0A8EFC` vs native `$0A9322`).
+      Promoted both entries; slot 5 then fired six charged shots with no
+      `$0A9ACC` miss and no persistent shot slot.
 - [ ] Audit the upstream `$0BD496` computed-dispatch offset that produces the
       misaligned targets, so they can eventually be handled as in-function
       labels instead of declined floor misses.
