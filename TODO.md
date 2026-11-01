@@ -71,6 +71,17 @@
       and scheduler state. 20 consecutive loads of one save each resumed
       exactly and advanced the game with no watchdog, dispatch, or
       illegal-opcode events.
+- [x] Fix the level-exit freeze (saves 2 and 4): the `$0A9A64` skip thunk
+      (`addq.l #4,a7; bra.w $0A8810`) consumed the JSR return slot above the
+      `$0A8EFC` continuation pushed by handler `$0A9010`. The generated split
+      RTS at `$0A886C` unwound and leaked 4 bytes per exit-object update until
+      it overwrote the `$FFFFFD10` V-int trampoline. Generated RTSes now
+      recognize a game-specified continuation only when the routine has a
+      positive skipped-return count, defer the skip to the enclosing tail
+      frame, and dispatch the continuation. Both saves ran 45 s with ~2,700
+      animated frames, stable A7, intact trampolines, and zero dispatch
+      failures in release and debug builds. The delta gate is required: the
+      same address is also a normal object-behavior return.
 
 ## Follow-ups
 

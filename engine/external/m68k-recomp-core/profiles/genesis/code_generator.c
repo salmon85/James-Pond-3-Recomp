@@ -1968,7 +1968,19 @@ static void emit_instr(FILE *f, const GenesisRom *rom,
          * resumes code the guest deliberately skipped. Tail edges do not
          * consume this count; each actual JSR/BSR caller consumes one. */
         if (*has_sp_adjust) {
-            fprintf(f, "  if (_sp_popped >= 4) { g_rte_pending = _sp_popped / 4; _sp_popped = 0; }\n");
+            /* A positive count means guest code skipped a return slot on this
+             * path. If the skip exposed a pushed continuation, run it before
+             * an enclosing JSR wrapper can consume the skip: defer the count
+             * to this tail-call frame, pop the continuation and dispatch it.
+             * Without a recognized top, hand the count to the wrapper. */
+            fprintf(f, "  if (_sp_popped >= 4) {\n");
+            fprintf(f, "    uint32_t _rts_top = m68k_read32(g_cpu.A[7]);\n");
+            fprintf(f, "    if (genesis_rts_continuation(_rts_top & 0xFFFFFFu)) {\n");
+            fprintf(f, "      recomp_defer_skip(_sp_popped / 4); _sp_popped = 0;\n");
+            fprintf(f, "      g_cpu.A[7] += 4; recomp_tail_call(_rts_top); return;\n");
+            fprintf(f, "    }\n");
+            fprintf(f, "    g_rte_pending = _sp_popped / 4; _sp_popped = 0;\n");
+            fprintf(f, "  }\n");
             fprintf(f, "  else if (g_split_sp_popped >= 4) { g_rte_pending = g_split_sp_popped / 4; g_split_sp_popped = 0; }\n");
         } else {
             fprintf(f, "  if (g_split_sp_popped >= 4) { g_rte_pending = g_split_sp_popped / 4; g_split_sp_popped = 0; }\n");
@@ -5150,6 +5162,7 @@ bool codegen_emit(const GenesisRom *rom, const FunctionList *funcs,
         "    int pending;\n"
         "    uint32_t addr;\n"
         "    struct RecompTailFrame *prev;\n"
+        "    int deferred_skip;\n"
         "} RecompTailFrame;\n\n"
         "static RecompTailFrame *g_recomp_tail_frame = NULL;\n\n"
         "/* The frame list lives on the game fiber's stack and its head is\n"
@@ -5165,6 +5178,13 @@ bool codegen_emit(const GenesisRom *rom, const FunctionList *funcs,
         "                            void *user) {\n"
         "    for (const RecompTailFrame *f = g_recomp_tail_frame; f; f = f->prev)\n"
         "        visit(f->pending, f->addr, user);\n"
+        "}\n\n"
+        "/* Report a return-slot skip to the wrapper of THIS tail-call frame.\n"
+        " * Applied when the frame's drain finishes, so continuations dispatched\n"
+        " * by the same flattened chain cannot consume it first. */\n"
+        "void recomp_defer_skip(int n) {\n"
+        "    if (g_recomp_tail_frame) g_recomp_tail_frame->deferred_skip += n;\n"
+        "    else g_rte_pending += n;\n"
         "}\n\n"
         "void recomp_tail_call(uint32_t addr) {\n"
         "    if (!g_recomp_tail_frame) {\n"
@@ -5203,18 +5223,20 @@ bool codegen_emit(const GenesisRom *rom, const FunctionList *funcs,
         "void recomp_call_func(RecompFuncPtr fn) {\n"
         "    if (!fn)\n"
         "        return;\n"
-        "    RecompTailFrame frame = { 0, 0, g_recomp_tail_frame };\n"
+        "    RecompTailFrame frame = { 0, 0, g_recomp_tail_frame, 0 };\n"
         "    g_recomp_tail_frame = &frame;\n"
         "    fn();\n"
         "    recomp_drain_tailcalls(&frame);\n"
         "    g_recomp_tail_frame = frame.prev;\n"
+        "    if (frame.deferred_skip) g_rte_pending += frame.deferred_skip;\n"
         "}\n\n"
         "void recomp_call_addr(uint32_t addr) {\n"
-        "    RecompTailFrame frame = { 0, 0, g_recomp_tail_frame };\n"
+        "    RecompTailFrame frame = { 0, 0, g_recomp_tail_frame, 0 };\n"
         "    g_recomp_tail_frame = &frame;\n"
         "    recomp_tail_call(addr);\n"
         "    recomp_drain_tailcalls(&frame);\n"
         "    g_recomp_tail_frame = frame.prev;\n"
+        "    if (frame.deferred_skip) g_rte_pending += frame.deferred_skip;\n"
         "}\n\n"
         "void call_by_address(uint32_t addr) {\n"
         "    recomp_call_addr(addr);\n"

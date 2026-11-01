@@ -78,6 +78,17 @@ static int jp3_instruction_hook(uint32_t pc)
     return 0;
 }
 
+/* Handler $0A9010 pushes $0A8EFC as a continuation (`pea.l $a8efc(pc)`).
+ * The $0A9A64 skip thunk (`addq.l #4,a7; bra.w $0A8810`) consumes the JSR
+ * return slot above it, so $0A886C's RTS finds the continuation on top with a
+ * positive skip still owed to the enclosing wrapper. That combination is the
+ * only one where this address is a continuation; a plain object-behavior RTS
+ * to the same address has no pending skip and must keep normal flow. */
+static int jp3_rts_continuation(uint32_t addr)
+{
+    return addr == 0x0A8EFCu;
+}
+
 /* Portable (cross-process/legacy) loads restart the game fiber at the
  * main-loop top instead of resuming the saved host stack. A save captured in
  * an interrupt-masked transition then deadlocks in WaitForVint ($0B620E):
@@ -157,6 +168,7 @@ const GameSpec g_game_spec = {
     .arg_usage              = NULL,
     .dispatch_override      = NULL,
     .instruction_hook       = jp3_instruction_hook,
+    .rts_continuation       = jp3_rts_continuation,
 
     .fill_frame_record      = NULL,
     .frame_record_version   = 0u,

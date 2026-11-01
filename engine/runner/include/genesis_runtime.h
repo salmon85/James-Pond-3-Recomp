@@ -89,6 +89,11 @@ typedef void (*RecompFuncPtr)(void);
 void recomp_tail_call(uint32_t addr);
 void recomp_call_addr(uint32_t addr);
 void recomp_call_func(RecompFuncPtr fn);
+/* Defer a consumed-return-slot count to the wrapper of the current tail-call
+ * frame. Use when guest code skipped a return slot in a chain that continues
+ * through a pushed continuation: the continuation must run before any
+ * enclosing JSR wrapper applies the skip. */
+void recomp_defer_skip(int n);
 /* Tail-dispatch frame list (defined in the generated <prefix>_dispatch.c).
  * Each active recomp_call_func/recomp_call_addr owns one frame on the GAME
  * FIBER stack; the head pointer is therefore execution state that must travel
@@ -201,6 +206,8 @@ extern int g_early_return;
 
 /* Sparse game-owned pre-instruction extension (only configured PCs call it). */
 int genesis_game_instruction_hook(uint32_t pc);
+/* Generated RTS continuation recognition (only called with a positive skip). */
+int genesis_rts_continuation(uint32_t addr);
 /* Generated table lookup: nonzero when `pc` is a configured game_hook site.
  * The tier-3 interpreter uses it to run the same hooks as generated code. */
 int game_instruction_hook_site(uint32_t pc);
