@@ -100,13 +100,14 @@
       forever. The portable-load repair now restores A6; slot 3's 32 leaked
       objects expire back to 9 and the player state machine runs.
 - [x] Minimizing the window under Wayland dropped the game to about 19.5 fps
-      and made the audio robotic. A compositor stops sending frame callbacks
+      and made the audio robotic. The compositor stops sending frame callbacks
       to a minimized window, so the vsynced `SDL_RenderPresent` blocked and
-      throttled the whole main loop, including the audio feed. Frames are now
-      simulated and paced at 60 Hz while minimized; GPU upload and present
-      resume when the window is visible. Verified 60 fps (240 frames per 4 s)
-      and zero audio underrun flushes while minimized on both map and level;
-      a visible run still measures 59.8 fps.
+      throttled the whole main loop, including the audio feed. KWin does not
+      report a compositor-driven minimize through SDL's window flags (only a
+      focus change), so the swap interval is now dropped while the window is
+      unfocused and restored when focus returns; SDL-reported minimization
+      also skips presentation. Verified 59.9 fps focused, minimized, and
+      restored, with zero audio underrun flushes on both map and level.
 - [ ] Audit the upstream `$0BD496` computed-dispatch offset that produces the
       misaligned targets, so they can eventually be handled as in-function
       labels instead of declined floor misses.

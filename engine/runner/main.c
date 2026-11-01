@@ -2798,14 +2798,18 @@ int main(int argc, char *argv[])
         fprintf(stderr, "SDL_CreateRenderer: %s\n", SDL_GetError());
         return 1;
     }
+    int vsync_managed = 0;   /* renderer supports toggling the swap interval */
+    int vsync_on = 0;
     {
         SDL_RendererInfo ri;
         memset(&ri, 0, sizeof(ri));
         SDL_GetRendererInfo(renderer, &ri);
+        vsync_on = (ri.flags & SDL_RENDERER_PRESENTVSYNC) != 0;
+        vsync_managed = vsync_on;
         fprintf(stderr, "%s name=%s vsync=%d\n",
                 benchmark_frames ? "GENESISRECOMP_BENCHMARK_RENDERER" : "[VIDEO] renderer",
                 ri.name ? ri.name : "(unknown)",
-                (ri.flags & SDL_RENDERER_PRESENTVSYNC) != 0);
+                vsync_on);
     }
     update_render_logical_size(renderer);
 
@@ -3721,11 +3725,25 @@ session_begin:;
             runner_sram_autosave_tick(frame_num);
 
         FRAME_PHASE(5);
-        /* A Wayland compositor stops sending frame callbacks to a minimized
-         * window, so the vsynced present blocks and throttles the whole
-         * simulation (and its audio). Skip the swap while minimized;
-         * simulation and pacing keep running at full speed. */
-        int iconified = (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED) != 0;
+        /* A Wayland compositor stops sending frame callbacks to a window it
+         * has minimized, so a vsynced present blocks and throttles the whole
+         * simulation (and its audio). KWin does not expose minimization
+         * through SDL's window flags, but it does take focus away, so drop
+         * the swap interval while the window is unfocused and restore it when
+         * focus returns. SDL's own minimize flag is honoured as well. */
+        int window_flags = (int)SDL_GetWindowFlags(window);
+        int iconified = (window_flags & SDL_WINDOW_MINIMIZED) != 0;
+        int focused = (window_flags & SDL_WINDOW_INPUT_FOCUS) != 0;
+        if (vsync_managed && focused != vsync_on) {
+            if (SDL_RenderSetVSync(renderer, focused ? 1 : 0) == 0) {
+                vsync_on = focused;
+                fprintf(stderr, "[vsync] %s at frame %u\n",
+                        vsync_on ? "on" : "off", frame_num);
+            } else {
+                vsync_managed = 0;
+                fprintf(stderr, "[vsync] toggle failed: %s\n", SDL_GetError());
+            }
+        }
         /* Upload framebuffer to GPU texture. When a present-time color model
          * is enabled, transform a COPY into s_present_buf and upload that —
          * s_framebuf (the verified/hashed raw VDP output) is never modified. */

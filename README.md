@@ -150,8 +150,9 @@ before the restart, so a save captured mid-transition does not deadlock.
 - [x] Minimizing the window no longer stalls the game on Wayland. The
       compositor stops sending frame callbacks to a minimized window, which
       blocked the vsynced present and dragged the simulation (and its audio)
-      down to about 19 fps. Presentation is skipped while minimized, so the
-      simulation and audio keep running at 60 Hz.
+      down to about 19 fps. KWin only reports this to SDL as focus loss, so
+      the swap interval is dropped while the window is unfocused and restored
+      on focus; the simulation and audio keep running at 60 Hz.
 - [x] Optional reverse-debug build (`-DSONIC_REVERSE_DEBUG=ON`) exposes the
       current generated function and block trail for GDB/TCP capture.
 - [x] Audio output verified from Garden of Edam with an SDL disk capture:
