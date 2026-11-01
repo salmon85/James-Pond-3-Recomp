@@ -85,9 +85,12 @@
       Tier-3 capsule. Promoted them to native entries; a single load now
       reports no interior-label or dispatch misses, and manual repeated-load
       testing keeps enemies and projectiles moving.
-- [ ] Cross-process/older save loads still mismatch map vs. level mode; the
-      mini-map may not return until the next transition. Decode the guest
-      stack into a restorable guest state to remove the fallback.
+- [x] Cross-process/older map saves resumed at the mode dispatcher
+      (`$0B72C8`), which re-ran level entry and left the map scrolling into a
+      bogus level slice. Portable loads now restart at the steady-state frame
+      loop (`$0A1E5E`), so map saves stay on the map and level saves stay
+      in-level. Verified map movement, 15 repeated loads, strict JSR stacks,
+      and the map-to-level transition.
 - [ ] Audit the upstream `$0BD496` computed-dispatch offset that produces the
       misaligned targets, so they can eventually be handled as in-function
       labels instead of declined floor misses.
@@ -103,6 +106,6 @@
 - The ROM is user-supplied and is not tracked by Git.
 - Save files are only exact-resume in the process that wrote them; a save
   loaded by another process (or an older build) restores RAM/VDP and
-  restarts the fiber at `$0B72C8`, with game-specific transient-state
-  repair.
+  restarts the fiber at the steady-state frame loop `$0A1E5E`, with
+  game-specific transient-state repair.
 - The title/menu wipe is a raster transition; stable menu frames are clean.
