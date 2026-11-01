@@ -84,9 +84,9 @@ static int jp3_instruction_hook(uint32_t pc)
  * positive skip still owed to the enclosing wrapper. That combination is the
  * only one where this address is a continuation; a plain object-behavior RTS
  * to the same address has no pending skip and must keep normal flow. */
-static int jp3_rts_continuation(uint32_t addr)
+static int jp3_rts_continuation(uint32_t rts_pc, uint32_t addr)
 {
-    return addr == 0x0A8EFCu;
+    return rts_pc == 0x0A886Cu && addr == 0x0A8EFCu;
 }
 
 /* Portable (cross-process/legacy) loads restart the game fiber at the
@@ -117,9 +117,37 @@ static void jp3_portable_load_fixup(void)
             if (*type < 4) { *type = 0xFF; freed++; }
         }
     }
-    if (old_sr != g_cpu.SR || freed)
-        fprintf(stderr, "[LOAD] portable fixup: SR %04X->%04X, freed %d transient slots\n",
-                (unsigned)old_sr, (unsigned)g_cpu.SR, freed);
+
+    /* Saves written by builds that never ran the boot block at $0B563A carry
+     * garbage where the A/B/C press pointers belong. $0B6EDE then copies the
+     * joypad edges into random RAM and jump/attack/sprint never arrive at
+     * $F9B9-$F9BB. The only valid values are the 4 permutations in the
+     * $09FF9A controller table, so anything else is restored to defaults. */
+    static const uint32_t btn_ptr[3] = {0xFFFFF9B9u, 0xFFFFF9BAu, 0xFFFFF9BBu};
+    uint32_t btn[3];
+    for (unsigned i = 0; i < 3; i++) {
+        const uint8_t *p = &g_ram[0xFD1Cu + i * 4u];
+        btn[i] = ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) |
+                 ((uint32_t)p[2] << 8) | p[3];
+    }
+    int ptr_fixed = 0;
+    if (!(btn[0] >= btn_ptr[0] && btn[0] <= btn_ptr[2] &&
+          btn[1] >= btn_ptr[0] && btn[1] <= btn_ptr[2] &&
+          btn[2] >= btn_ptr[0] && btn[2] <= btn_ptr[2] &&
+          btn[0] != btn[1] && btn[1] != btn[2] && btn[0] != btn[2])) {
+        for (unsigned i = 0; i < 3; i++) {
+            uint8_t *p = &g_ram[0xFD1Cu + i * 4u];
+            p[0] = (uint8_t)(btn_ptr[i] >> 24);
+            p[1] = (uint8_t)(btn_ptr[i] >> 16);
+            p[2] = (uint8_t)(btn_ptr[i] >> 8);
+            p[3] = (uint8_t)btn_ptr[i];
+        }
+        ptr_fixed = 3;
+    }
+    if (old_sr != g_cpu.SR || freed || ptr_fixed)
+        fprintf(stderr, "[LOAD] portable fixup: SR %04X->%04X, freed %d transient slots, "
+                "repaired %d input pointers\n",
+                (unsigned)old_sr, (unsigned)g_cpu.SR, freed, ptr_fixed);
 }
 
 /* Portable saves resume in the loop that was actually running. $0A1E5E is

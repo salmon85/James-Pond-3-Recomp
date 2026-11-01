@@ -207,7 +207,7 @@ extern int g_early_return;
 /* Sparse game-owned pre-instruction extension (only configured PCs call it). */
 int genesis_game_instruction_hook(uint32_t pc);
 /* Generated RTS continuation recognition (only called with a positive skip). */
-int genesis_rts_continuation(uint32_t addr);
+int genesis_rts_continuation(uint32_t rts_pc, uint32_t addr);
 /* Generated table lookup: nonzero when `pc` is a configured game_hook site.
  * The tier-3 interpreter uses it to run the same hooks as generated code. */
 int game_instruction_hook_site(uint32_t pc);

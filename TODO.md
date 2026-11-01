@@ -119,6 +119,16 @@
       unfocused and restored when focus returns; SDL-reported minimization
       also skips presentation. Verified 59.9 fps focused, minimized, and
       restored, with zero audio underrun flushes on both map and level.
+- [x] Legacy in-level saves could not jump, attack, or sprint while a fresh
+      boot could. Those saves carry garbage in the `$0B563A` boot block
+      (`$FD1C/$FD20/$FD24` held `FFFF0000/000000B4/00183116` instead of
+      `FFFFF9B9/F9BA/F9BB`), so the joypad edge copies at `$0B6EDE` landed in
+      unrelated WRAM and `$F9B9-$F9BB` stayed zero. Confirmed a cold boot and
+      a fresh save both keep the trio correct, then made portable loads
+      restore the defaults whenever the trio is not one of the four `$09FF9A`
+      controller mappings. Slot 1 then reported A/B/C edges and showed jump
+      and attack on screen; saves 2 and 4 still ran 40 s animated in release
+      and debug with no unrunnable RAM code.
 - [ ] Audit the upstream `$0BD496` computed-dispatch offset that produces the
       misaligned targets, so they can eventually be handled as in-function
       labels instead of declined floor misses.

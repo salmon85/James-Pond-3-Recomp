@@ -221,9 +221,10 @@ typedef struct GameSpec {
     /* Opt-in RTS continuation recognition. Called by generated RTS code only
      * when the routine has a positive skipped-return count (guest code ran
      * `addq.l #4,sp` and still owes the enclosing caller a skip) and the top
-     * of stack is a return address. Return 1 when that address is a pushed
+     * of stack is a return address. `rts_pc` is the generated RTS site;
+     * `addr` is the stack top. Return 1 when that address is a pushed
      * continuation that must run before the skip is applied. NULL = never. */
-    int       (*rts_continuation)(uint32_t addr);
+    int       (*rts_continuation)(uint32_t rts_pc, uint32_t addr);
 
     /* Opt-in main-program CPU headroom, queried at each scheduler slice.
      * NULL / <=1 = exact native timing. IRQ, DMA, raster and sound clocks

@@ -48,9 +48,9 @@ int genesis_game_instruction_hook(uint32_t pc)
     return g_game_spec.instruction_hook ? g_game_spec.instruction_hook(pc) : 0;
 }
 
-int genesis_rts_continuation(uint32_t addr)
+int genesis_rts_continuation(uint32_t rts_pc, uint32_t addr)
 {
-    return g_game_spec.rts_continuation ? g_game_spec.rts_continuation(addr) : 0;
+    return g_game_spec.rts_continuation ? g_game_spec.rts_continuation(rts_pc, addr) : 0;
 }
 
 void recomp_push_return(uint32_t ret_addr)

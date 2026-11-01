@@ -1975,7 +1975,7 @@ static void emit_instr(FILE *f, const GenesisRom *rom,
              * Without a recognized top, hand the count to the wrapper. */
             fprintf(f, "  if (_sp_popped >= 4) {\n");
             fprintf(f, "    uint32_t _rts_top = m68k_read32(g_cpu.A[7]);\n");
-            fprintf(f, "    if (genesis_rts_continuation(_rts_top & 0xFFFFFFu)) {\n");
+            fprintf(f, "    if (genesis_rts_continuation(0x%06Xu, _rts_top & 0xFFFFFFu)) {\n", addr);
             fprintf(f, "      recomp_defer_skip(_sp_popped / 4); _sp_popped = 0;\n");
             fprintf(f, "      g_cpu.A[7] += 4; recomp_tail_call(_rts_top); return;\n");
             fprintf(f, "    }\n");
