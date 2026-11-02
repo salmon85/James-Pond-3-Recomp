@@ -148,9 +148,11 @@
       continuation targets (`$0AB66E`, `$0AB6F4`). A7 now stays put over
       1,300 frames (it leaked 4 bytes per call when only the bodies were
       promoted), the custards walk, collide, and cost the player HUD health.
-- [ ] Audit the upstream `$0BD496` computed-dispatch offset that produces the
-      misaligned targets, so they can eventually be handled as in-function
-      labels instead of declined floor misses.
+- [x] Audited the `$0BD496` misaligned targets (`$0BD4A8`, `$0BD524`,
+      `$0BD528`, `$0BD618`). They only appeared in old logs after A7 had
+      already collapsed to a wild value (`A7=$000022`, `$FFFD10` holding stack
+      bytes), so they were stack-corruption artifacts, not a real dispatcher
+      offset. Slots 2-5 now run 700 frames each with zero misses.
 - [ ] The tier-3 capsule accepts an interior-label miss when a `pea`
       continuation is on top of A7, but the native computed-JMP caller does
       not pop it; the result is a 4-byte-per-call guest-stack leak. Promoting
