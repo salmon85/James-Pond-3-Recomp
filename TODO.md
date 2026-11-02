@@ -158,9 +158,10 @@
       in-function switch for `jmp (pc,d0.w)` tables (same class as the
       `$0BD496` item above).
 - [ ] Validate later areas, enemies, and level completion against NTSC MAME.
-- [ ] Investigate the development `--wav` capture path, which writes a
-      constant offset; the real SDL output path plays the level audio
-      correctly.
+- [x] The development `--wav` capture always reported 0 bytes because the
+      input-script EXIT path returned from `main()` before the cleanup that
+      rewrites the RIFF/data sizes. A scripted run now stops the capture too;
+      a 661-frame slot-1 capture reads back as 11.03 s of non-silent audio.
 
 ## Final step
 

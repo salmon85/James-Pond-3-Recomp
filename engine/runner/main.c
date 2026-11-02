@@ -3677,6 +3677,7 @@ session_begin:;
                 fprintf(stderr, "[input_script] exiting per script directive (code=%d)\n",
                         input_script_exit_code());
                 if (s_sram_dirty) runner_sram_flush();
+                { extern void audio_wav_stop(void); audio_wav_stop(); }
                 return input_script_exit_code();
             }
         }
