@@ -190,6 +190,14 @@ late_extra = [
     0x0AC2B6,   # enemy handler, behavior pointer $0CA9B0
     0x0AC2DA,   # $0AC2B6 state ladder slot 0 (bra.w)
     0x0AC2DE,   # $0AC2B6 state body reached by the slot 0 bra.w
+    # Type $3D handler ($0AC524, listed above) pushes the $0AC53E
+    # continuation then jumps through `jmp $ac542(pc,d0.w)`. Without these
+    # slots the tier-3 capsule runs the ladder with the pushed longword as
+    # its return, accepts it as balanced, and the native caller pops the
+    # wrong slot — a 4-byte leak per frame that overwrites $FFFD10.
+    0x0AC542,   # $0AC524 state ladder slot 0 (bra.w)
+    0x0AC546,   # $0AC524 state ladder slot 1 (bra.b)
+    0x0AC53E,   # $0AC524 `pea.l` continuation (jmp $0A94EE)
     0x0ABA46,   # enemy handler, behavior pointers $0CA2A8 / $0CA398
     0x0ABA6E,   # $0ABA46 state ladder slot 0 (bra.w)
     0x0ABA72,   # $0ABA46 state ladder slot 1 (bra.w)

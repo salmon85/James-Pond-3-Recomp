@@ -193,6 +193,16 @@
       continues to the map. Item tiles are uploaded per collected item, so
       the icons reflect the save's inventory (18 here) rather than the
       different inventory in the hardware capture.
+- [x] Slot 1's save crashed about 120 frames after loading, ending in an
+      `unrunnable $FFFD10` and a garbage screen. The type-$3D handler
+      `$0AC524` pushes the `$0AC53E` continuation and jumps through
+      `jmp $ac542(pc,d0.w)`, but slots `$0AC542`/`$0AC546` had no native
+      bodies. The tier-3 capsule ran the ladder, stopped at the body's RTS,
+      peeked the pushed continuation as its return, and the native caller
+      popped the wrong slot — a 4-byte leak per frame until A7 crossed and
+      overwrote the `$FFFFFD10` V-int trampoline. Promoted both ladder slots
+      and the `$0AC53E` continuation; 1,561 frames now run with a stable A7
+      and zero floor, dispatch, or stack events.
 
 ## Final step
 
