@@ -140,9 +140,23 @@
       ran `$0A9ACC` and declined it (`exit_pc=$0A8EFC` vs native `$0A9322`).
       Promoted both entries; slot 5 then fired six charged shots with no
       `$0A9ACC` miss and no persistent shot slot.
+- [x] Slot 1's custard monsters (type 4, behavior pointers `$0CA17C` /
+      `$0CA1B8`) were frozen, intangible, and harmless. Their handlers are
+      reached only by computed dispatch, so the tier-3 capsule ran `$0AB650`
+      once and declined it. Promoted the handlers, the `jmp (pc,d0.w)` ladder
+      entries (`$0AB678/$0AB67C`, `$0AB704-$0AB714`), and the `pea`
+      continuation targets (`$0AB66E`, `$0AB6F4`). A7 now stays put over
+      1,300 frames (it leaked 4 bytes per call when only the bodies were
+      promoted), the custards walk, collide, and cost the player HUD health.
 - [ ] Audit the upstream `$0BD496` computed-dispatch offset that produces the
       misaligned targets, so they can eventually be handled as in-function
       labels instead of declined floor misses.
+- [ ] The tier-3 capsule accepts an interior-label miss when a `pea`
+      continuation is on top of A7, but the native computed-JMP caller does
+      not pop it; the result is a 4-byte-per-call guest-stack leak. Promoting
+      each computed-jump ladder entry avoids it. The recompiler should emit an
+      in-function switch for `jmp (pc,d0.w)` tables (same class as the
+      `$0BD496` item above).
 - [ ] Validate later areas, enemies, and level completion against NTSC MAME.
 - [ ] Investigate the development `--wav` capture path, which writes a
       constant offset; the real SDL output path plays the level audio

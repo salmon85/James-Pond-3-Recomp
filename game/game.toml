@@ -132,6 +132,29 @@ late_extra = [
     0x0AB8EA,   # enemy handler, behavior pointer $0CA26C
     0x0AB910,   # $0AB8EA state ladder slot 0 (bra.w)
     0x0AB914,   # $0AB8EA state ladder slot 1 (bra.w)
+    # Custard-monster handlers (behavior pointers $0CA17C / $0CA1B8) and
+    # their `jmp (pc,d0.w)` state ladders. The tier-3 capsule declined
+    # $0AB650 at load (its tail jmp $0A94EE never matches the native
+    # $0A9322 return), leaving the type-4 objects frozen, intangible, and
+    # harmless.
+    0x0AB650,   # custard handler, behavior pointer $0CA17C
+    0x0AB678,   # $0AB650 `jmp $ab678(pc,d0.w)` ladder base slot 0
+    0x0AB67C,   # $0AB650 state ladder slot 1
+    0x0AB680,   # $0AB650 state body 0 (bra.w target)
+    0x0AB6BC,   # $0AB650 state body 1
+    0x0AB66E,   # $0AB650 state body RTS target (pea.l $ab66e)
+    0x0AB6D6,   # custard variant handler, behavior pointer $0CA1B8
+    0x0AB704,   # $0AB6D6 `jmp $ab704(pc,d0.w)` ladder base slot 0
+    0x0AB708,   # $0AB6D6 state ladder slot 1
+    0x0AB70C,   # $0AB6D6 state ladder slot 2
+    0x0AB710,   # $0AB6D6 state ladder slot 3
+    0x0AB714,   # $0AB6D6 state ladder slot 4
+    0x0AB718,   # $0AB6D6 state body 0 (rts)
+    0x0AB71A,   # $0AB6D6 state body 1
+    0x0AB750,   # $0AB6D6 state body 2
+    0x0AB786,   # $0AB6D6 state body 3
+    0x0AB7E2,   # $0AB6D6 state body 4
+    0x0AB6F4,   # $0AB6D6 state body RTS target (pea.l $ab6f4)
     # Common projectile/enemy behavior entries and their jump-table targets,
     # seen as interior-label misses while fired apples and white orbs sat
     # still. Each target decodes to a real instruction, so promote it instead
