@@ -69,6 +69,14 @@ kind = "game_hook"
 addr = 0x0BD424
 kind = "game_hook"
 
+# The boss-death debrief ($0AE14C) jumps into the text window without the
+# level-exit plane-B clear, leaving the arena floor visible under the item
+# grid. The adapter clears plane B once here, matching hardware's black
+# debrief background.
+[[widescreen_site]]
+addr = 0x0AE14C
+kind = "game_hook"
+
 [functions]
 # Vector-table seeds are automatic; the game entry reached by the stock init
 # routine's JSR is listed explicitly because it is the real main routine.
@@ -89,6 +97,69 @@ extra = [
     0x09FA3C,   # H-int scroll setup helper called from $09FA16's cluster
     0x0A7F2E,   # static JMP (A4) target in the level tilemap blitter
     0x0A1E5E,   # steady-state frame-loop top; portable save resume point
+    # Enemy state handlers reached only through the object behavior table at
+    # $0C9B10 (slot update calls `jsr (a5)`), so heuristic discovery never
+    # seeds them. Each is a real entry: it starts on an instruction boundary
+    # and ends in RTS or a tail `jmp $0A94EE`. Without a native body the
+    # tier-3 capsule runs them, its tail jump returns into the capsule frame,
+    # and the decline leaves the object frozen for the whole level.
+    0x0ACF66,   # type $4D handler, behavior pointer $0CAE1C
+    0x0ABF18,   # type $32 handler, behavior pointer $0CA7C8
+    0x0ABAD4,   # type $1D handler, behavior pointer $0CA2DC
+    0x0AB40C,   # type $15 handler, behavior pointer $0CA0FC
+    0x0ACBD2,   # type $48 handler, behavior pointer $0CACF0
+    0x0AC13C,   # type $38 handler, behavior pointer $0CA930
+    # Every remaining behavior-table handler the type table at $0C9B10
+    # declares (types $00-$D5). The table is authoritative about real entry
+    # points: each target decodes on an instruction boundary and ends in RTS
+    # or a tail branch. Seeding the whole set means a computed dispatch into
+    # any enemy handler in the level can never fall to the tier-3 capsule.
+    0x0A9738,   # type $00, $0A, $0B
+    0x0A9764,   # type $01
+    0x0A97AC,   # type $05
+    0x0A98EA,   # type $08
+    0x0A99F6,   # type $02, $03, $04
+    0x0A9B32,   # type $0C
+    0x0A9C76,   # type $0E
+    0x0A9CDC,   # type $10
+    0x0AA71A,   # type $11
+    0x0AA746,   # type $0D
+    0x0AABDE,   # type $13
+    0x0AAD80,   # type $12
+    0x0AB1EA,   # type $14
+    0x0AB572,   # type $16
+    0x0ABC34,   # type $21
+    0x0ABD22,   # type $22
+    0x0ABD2A,   # type $23
+    0x0ABD32,   # type $24
+    0x0ABE82,   # type $26-$34 (even), shared handler
+    0x0ABF06,   # type $25
+    0x0ABF6C,   # type $36
+    0x0AC154,   # type $37
+    0x0AC246,   # type $39
+    0x0AC4B8,   # type $3C
+    0x0AC524,   # type $3D
+    0x0AC5DA,   # type $3E
+    0x0AC5E2,   # type $3F, $4F
+    0x0AC666,   # type $40, $D5
+    0x0AC9AE,   # type $06
+    0x0AC9C8,   # type $41
+    0x0AC9DA,   # type $42
+    0x0ACA8A,   # type $43
+    0x0ACAAE,   # type $45
+    0x0ACACE,   # type $44
+    0x0ACAFE,   # type $46
+    0x0ACB68,   # type $47
+    0x0ACC04,   # type $49
+    0x0ACCBC,   # type $4A
+    0x0ACE92,   # type $4B
+    0x0ACEAA,   # type $4C
+    0x0ACF76,   # type $4E
+    0x0AD02E,   # type $51
+    0x0AD0F0,   # type $50
+    0x0AD122,   # type $53
+    0x0AD1E8,   # type $57
+    0x0AD258,   # type $56
 ]
 # Audited runtime-evidence entries. These are computed-call/state-table
 # targets seen in dispatch_misses.toml / floor_coverage.toml while moving,
@@ -171,6 +242,16 @@ late_extra = [
     0x0A9A6A,   # charged-shot state entry, pointer pair at $0C9E34
     0x0A9ACC,   # charged-shot state entry, pointer pair at $0C9E34
     0x0B76B8,   # $0B76B0 state-ladder slot 1 (bra.w)
+    # Boss-death debrief ($0AE014): $0AE05C installs $0AE182 into the H-int
+    # trampoline at $FFFFFD0C. Without a native body the per-line VSRAM scroll
+    # never ran and the frame loop spun on the floor capsule.
+    0x0AE182,   # debrief H-int body installed at $FFFFFD0C by $0AE05C
+    # The mode loop's `bsr` at $0B731A calls $0B23D4, whose RTS tail-dispatches
+    # the return label $0B731E. That label is also the $0B7318 beq target, so
+    # the generator can split the parent there; without an entry every frame
+    # update logged an interior-label miss and skipped the rest of the mode
+    # loop in the caller's tail frame.
+    0x0B731E,   # mode-loop continuation label, $0B7318 beq / $0B731A return
 ]
 # The $0BD496 object-update cluster produced runtime targets that decode to
 # mid-instruction operands ($0BD4A8, $0BD524, $0BD528, $0BD618). They are return

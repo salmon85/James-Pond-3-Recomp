@@ -16,6 +16,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 #define JP3_ENTRY_PC   0x000200u
 #define JP3_HBLANK_PC  0xFFFFFD0Au
@@ -40,6 +41,14 @@ static int s_busreq_depth;
  * slot behind and leaks 4 bytes of guest stack per decompression. */
 static int jp3_instruction_hook(uint32_t pc)
 {
+    if (pc == 0x0AE14Cu) {
+        /* Boss-death debrief: $0AE14C jumps straight to the text window and
+         * never runs the level-exit plane-B clear at $0B5832, so the arena
+         * floor stays visible under the item grid. Hardware's debrief
+         * background is black; clear plane B once on entry. */
+        memset(g_machine.vdp.vram + 0xE000, 0, 0x1000);
+        return 0;
+    }
     if (pc == 0x0BD424u) {
         /* Five valid entries at $0BD428, stride 4. Clamp corrupted states. */
         if (g_cpu.D[0] > 16u) g_cpu.D[0] = 0u;

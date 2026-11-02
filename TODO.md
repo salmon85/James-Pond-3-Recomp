@@ -177,6 +177,23 @@
       a fresh map entry still loops (390 s of music), and slots 2-5 load with
       no repair needed.
 
+- [x] Slot 2's jetpack rats and bees stayed frozen: their handlers live only
+      in the object behavior table at `$0C9B10` and were reached by computed
+      `jsr (a5)`, so every one ran in the Tier-3 capsule. Promoted all
+      remaining type-table handlers ($00-$D5) to `game.toml`, plus the
+      debrief H-int body `$0AE182` and the mode-loop return label `$0B731E`
+      that the dispatch still reported. Slot 2 now moves and animates its
+      enemies with no unique dispatch/interior misses through frame 1,800.
+- [x] Slot 3's boss-death debrief drew the arena floor through the item grid
+      and left the FISH background wrong. The debrief entry `$0AE14C` jumps
+      straight to the text window and never runs the level-exit plane-B clear
+      at `$0B5832`, so plane B still held the level tiles. A game hook now
+      clears VRAM `$E000-$EFFF` once at `$0AE14C`; frames 400-1,600 show a
+      black background and the full 11+11 item-grid layout, and pressing C
+      continues to the map. Item tiles are uploaded per collected item, so
+      the icons reflect the save's inventory (18 here) rather than the
+      different inventory in the hardware capture.
+
 ## Final step
 
 - [ ] Create a standalone setup/builder program that asks the user for the
