@@ -11,6 +11,7 @@
  */
 #include "game_spec.h"
 #include "genesis_runtime.h"
+#include "genesis_machine.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -150,6 +151,28 @@ static void jp3_portable_load_fixup(void)
                 (unsigned)old_sr, (unsigned)g_cpu.SR, freed, ptr_fixed);
 }
 
+/* The song loop flag is bit 3 of the sound mailbox at Z80 $0102, written only
+ * by the 68K sound API ($184AF4/$184AF0, chosen by the $1FD912 table). The Z80
+ * driver edits only bits 7 and 0 of that byte, but its read-modify-write can
+ * straddle a 68K bset/bclr and write back a copy read before the flag changed;
+ * the song then reaches its end and never auto-restarts, because $1FD83C is
+ * re-issued only when the song id changes. gbus_z80_write keeps bit 3 68K-owned
+ * from now on; this rebuilds it from the table for states captured before that
+ * fix. $FBE6 is the current song id, and the driver only loops a song while
+ * the flag agrees with the table. */
+static void jp3_on_state_loaded(void)
+{
+    unsigned song = ((unsigned)g_ram[0xFBE6] << 8) | g_ram[0xFBE7];
+    if (song > 15u) return;
+    uint8_t loop = g_rom[0x1FD912u + song] ? 0x08u : 0x00u;
+    uint8_t *flag = &g_machine.bus.z80_ram[0x0102];
+    if ((*flag & 0x08u) == loop) return;
+    uint8_t old = *flag;
+    *flag = (uint8_t)((*flag & (uint8_t)~0x08u) | loop);
+    fprintf(stderr, "[LOAD] sound loop flag repaired: $0102 %02X->%02X (song %u)\n",
+            old, *flag, song);
+}
+
 /* Portable saves resume in the loop that was actually running. $0A1E5E is
  * the map/overworld loop; $FFFF2799 is $FF once a level is active, and the
  * in-level per-frame update lives in the $0B72C8 mode loop (it dispatches the
@@ -186,6 +209,7 @@ const GameSpec g_game_spec = {
     .dispatch_main_loop_pc  = 0u,
     .call_periodic          = NULL,
     .portable_load_fixup    = jp3_portable_load_fixup,
+    .on_state_loaded        = jp3_on_state_loaded,
 
     .on_post_reset          = NULL,
     .on_frame_pre           = NULL,

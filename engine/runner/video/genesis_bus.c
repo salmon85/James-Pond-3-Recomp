@@ -502,6 +502,12 @@ void gbus_z80_write(GenesisBus *b, uint16_t addr, uint8_t val)
 {
     if (addr < 0x4000u) { unsigned off = addr & 0x1FFFu;
         if (g_sndwatch[off]) snd_trace_z80((uint16_t)off, val, 1);  /* [SND-TRACE] */
+        /* The 68K owns bit 3 of the sound mailbox (song loop flag); the Z80
+         * only edits bits 7 and 0 there, but its read-modify-write can write
+         * back a copy read before a 68K bset/bclr landed in an earlier slice,
+         * silently clearing the flag for the rest of the song. */
+        if (off == 0x0102u)
+            val = (uint8_t)((val & ~0x08u) | (b->z80_ram[off] & 0x08u));
         b->z80_ram[off] = val; return; }                           /* RAM+mirror */
     if (addr < 0x6000u) {
         uint8_t port = (uint8_t)(addr & 3);

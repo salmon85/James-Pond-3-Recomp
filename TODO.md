@@ -165,6 +165,18 @@
       rewrites the RIFF/data sizes. A scripted run now stops the capture too;
       a 661-frame slot-1 capture reads back as 11.03 s of non-silent audio.
 
+- [x] Slot 1's map song stopped after its first pass. The loop flag (bit 3 of
+      the sound mailbox at Z80 `$0102`) is written only by the 68K sound API,
+      chosen from the `$1FD912` table, but the Z80 driver's read-modify-write
+      of that byte (`$0834` set 7, `$085A` res 7, `$088B` res 0) can straddle
+      a 68K `bset`/`bclr` in an earlier scanline slice and write back a stale
+      copy; the song then ends and `$1FD83C` is never re-issued. Z80 writes to
+      `$0102` now keep bit 3 from RAM, and a load rebuilds the flag from the
+      table for states captured before that (slot 1 reports `$0102 30->38`).
+      Slot 1 then plays 50 s without touching the mixer's 380 silence floor,
+      a fresh map entry still loops (390 s of music), and slots 2-5 load with
+      no repair needed.
+
 ## Final step
 
 - [ ] Create a standalone setup/builder program that asks the user for the
