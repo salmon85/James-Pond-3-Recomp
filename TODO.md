@@ -214,6 +214,17 @@
       showing poked 1s restored to 9 lives / 5 health / 9 frog lives,
       while an empty mask leaves poked values untouched.
 
+- [x] Slot 1 crashed a few hundred frames after loading its later-area save:
+      A7 walked down 4 bytes per frame until it overwrote the `$FFFD10`
+      V-int trampoline (`unrunnable RAM code $FFFD10`). The live type-$4E
+      object runs `$0ACF76`, which pushes the `$0ACF90` continuation and
+      jumps through `jmp $ACF94(pc,d0.w)`; the ladder slots and continuation
+      were not native, so the capsule left the pushed longword on the guest
+      stack. Promoted `$0ACF94`, `$0ACF98`, and `$0ACF90` (same class as the
+      `$0AC524`/`$0AC53E` fix). Slots 1-5 now run 2,000+ frames each with
+      `GENESIS_STRICT_JSR_STACK=1` and zero mismatches, `$FFFD10` intact,
+      and zero dispatch/floor/interior-label evidence entries.
+
 ## Final step
 
 - [ ] Create a standalone setup/builder program that asks the user for the

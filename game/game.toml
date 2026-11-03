@@ -198,6 +198,14 @@ late_extra = [
     0x0AC542,   # $0AC524 state ladder slot 0 (bra.w)
     0x0AC546,   # $0AC524 state ladder slot 1 (bra.b)
     0x0AC53E,   # $0AC524 `pea.l` continuation (jmp $0A94EE)
+    # Type $4E handler ($0ACF76, slot 1's live object) pushes the $0ACF90
+    # continuation then jumps through `jmp $acf94(pc,d0.w)`. Same failure as
+    # $0AC524 above: the capsule ran the ladder and left the pushed longword
+    # on the guest stack, leaking 4 bytes per frame until A7 overwrote the
+    # $FFFD10 V-int trampoline.
+    0x0ACF94,   # $0ACF76 state ladder slot 0 (bra.w)
+    0x0ACF98,   # $0ACF76 state ladder slot 1 (bra.b)
+    0x0ACF90,   # $0ACF76 `pea.l` continuation (jmp $0A94EE)
     0x0ABA46,   # enemy handler, behavior pointers $0CA2A8 / $0CA398
     0x0ABA6E,   # $0ABA46 state ladder slot 0 (bra.w)
     0x0ABA72,   # $0ABA46 state ladder slot 1 (bra.w)
