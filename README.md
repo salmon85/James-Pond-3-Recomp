@@ -86,8 +86,10 @@ SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
 
 Press `T` while playing to open the trainer menu. `Up`/`Down` select,
 `Enter` or `Space` toggles, `T` or `Esc` closes. The toggles are infinite
-lives, infinite health (also grants the maximum five health) and infinite
-frog lives. They stay enabled across levels and save loads until you quit.
+lives, infinite health (also grants the maximum five health), infinite
+frog lives and infinite jumps (each press of the jump button in mid-air
+boosts you upward again). They stay enabled across levels and save loads
+until you quit.
 
 ## Save states
 

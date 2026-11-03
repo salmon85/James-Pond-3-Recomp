@@ -213,6 +213,14 @@
       X11 menu run, a level reload with health still on, and RAM dumps
       showing poked 1s restored to 9 lives / 5 health / 9 frog lives,
       while an empty mask leaves poked values untouched.
+- [x] Trainer: infinite jumps. The game only launches a jump while
+      `$3D(player)` is zero and it stays nonzero until landing, so the
+      toggle instead rewrites the 16.16 vertical velocity at `$30(player)`
+      on each fresh B press in mid-air (same field the ground jump handler
+      sets, boosted to `$AA000`). Verified headless: four mid-air presses
+      climb from y=4080 to y=3525 while the same script with the toggle off
+      does one normal jump; 1,200+ further frames run with no strict-stack
+      mismatch and `$FFFD10` intact.
 
 - [x] Slot 1 crashed a few hundred frames after loading its later-area save:
       A7 walked down 4 bytes per frame until it overwrote the `$FFFD10`

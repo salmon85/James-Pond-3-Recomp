@@ -30,18 +30,31 @@
 #define JP3_RAM_MAX_HEALTH  0xFFFAA2u
 #define JP3_RAM_FROG_LIVES  0xFFFB86u
 
+/* Jump gating: $3D(player) is nonzero from takeoff until landing. A fresh B
+ * press in mid air rewrites the 16.16 vertical velocity at $30(player), the
+ * same word the ground jump handler sets, so the player rises again. */
+#define JP3_RAM_PLAYER_PTR  0xFFFCECu
+#define JP3_PLAYER_JUMPING  0x3Du
+#define JP3_PLAYER_VELOCITY 0x30u
+#define JP3_RAM_BUTTON_B    0xFFF9BAu
+#define JP3_AIR_JUMP_VELOCITY 0x000AA000u   /* ~sqrt(2) x the stock $78000 */
+
 enum {
-    JP3_TRAINER_LIVES      = 1u << 0,
-    JP3_TRAINER_HEALTH     = 1u << 1,
-    JP3_TRAINER_FROG_LIVES = 1u << 2,
+    JP3_TRAINER_LIVES        = 1u << 0,
+    JP3_TRAINER_HEALTH       = 1u << 1,
+    JP3_TRAINER_FROG_LIVES   = 1u << 2,
+    JP3_TRAINER_INFINITE_JUMPS = 1u << 3,
 };
 
 static const char *const jp3_trainer_labels[] = {
     "INFINITE LIVES",
     "INFINITE HEALTH",
     "INFINITE FROG LIVES",
+    "INFINITE JUMPS",
     NULL
 };
+
+static int s_jump_button_held;
 
 static void jp3_trainer_apply(uint32_t mask)
 {
@@ -53,6 +66,14 @@ static void jp3_trainer_apply(uint32_t mask)
         glue_poke16(JP3_RAM_MAX_HEALTH, 5);
         glue_poke16(JP3_RAM_HEALTH, 5);
     }
+
+    int held = glue_peek8(JP3_RAM_BUTTON_B) != 0;
+    if ((mask & JP3_TRAINER_INFINITE_JUMPS) && held && !s_jump_button_held) {
+        uint32_t a0 = glue_peek32(JP3_RAM_PLAYER_PTR) & 0xFFFFFFu;
+        if (a0 >= 0xFF0000u && glue_peek8(a0 + JP3_PLAYER_JUMPING) != 0)
+            glue_poke32(a0 + JP3_PLAYER_VELOCITY, JP3_AIR_JUMP_VELOCITY);
+    }
+    s_jump_button_held = held;
 }
 
 static void jp3_call_entry_point(void) { recomp_call_addr(JP3_ENTRY_PC); }
@@ -257,7 +278,7 @@ const GameSpec g_game_spec = {
     .on_frame_pre           = NULL,
     .on_frame_post          = NULL,
     .trainer_labels         = jp3_trainer_labels,
-    .trainer_item_count     = 3,
+    .trainer_item_count     = 4,
     .trainer_apply          = jp3_trainer_apply,
     .on_hblank              = NULL,
 
