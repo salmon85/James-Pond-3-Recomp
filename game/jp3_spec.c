@@ -50,10 +50,11 @@
 #define JP3_PLAYER_INVULN   0x96u
 #define JP3_INVULN_FRAMES   99u
 
-/* $D4(player) is the selected ammo type (0 apple, 1 orange, 2 cupcake,
- * 3 the fourth type the game never names in the intro text). $D5(player) is
- * the simultaneous-shot limit, not a count. The shot handler builds
- * $800|($15+$D4) and the gun counts live projectiles of that type. */
+/* $D4(player) is the selected ammo type (0 apple, 1 strawberry, 2 orange,
+ * 3 the fourth fruit). $D5(player) is the simultaneous-shot limit, not a
+ * count. The shot handler builds $800|($15+$D4) and the health-bar icon is
+ * $D4+1, so the trainer only overrides the type byte and leaves the game's
+ * ammo otherwise untouched. */
 #define JP3_PLAYER_AMMO     0xD4u
 
 enum {
@@ -64,6 +65,7 @@ enum {
     JP3_TRAINER_JETPACK_FUEL   = 1u << 4,
     JP3_TRAINER_INVULN         = 1u << 5,
     JP3_TRAINER_EXIT_LEVEL     = 1u << 6,
+    JP3_TRAINER_AMMO           = 1u << 7,
 };
 
 static const char *const jp3_trainer_labels[] = {
@@ -74,11 +76,12 @@ static const char *const jp3_trainer_labels[] = {
     "INFINITE JETPACK FUEL",
     "INFINITE INVULNERABILITY",
     "EXIT LEVEL FROM PAUSE",
+    "AMMO TYPE OVERRIDE",
     NULL
 };
 
 static const char *const jp3_ammo_labels[] = {
-    "APPLE", "ORANGE", "CUPCAKE", NULL
+    "APPLE", "STRAWBERRY", "ORANGE", NULL
 };
 
 static int s_jump_button_held;
@@ -112,9 +115,10 @@ static void jp3_trainer_apply(uint32_t mask, int ammo)
         glue_poke8(a0 + JP3_PLAYER_JETPACK_FUEL, 0);
     if ((mask & JP3_TRAINER_INVULN) && player_ok)
         glue_poke16(a0 + JP3_PLAYER_INVULN, JP3_INVULN_FRAMES);
-    /* Pin the gun to the trainer's ammo type. A pickup rewrites it for the
-     * rest of the frame that collected it; the next frame pins it again. */
-    if (player_ok && ammo >= 0 && ammo <= 2)
+    /* Pin the gun to the trainer's ammo type while the override is on. A
+     * pickup rewrites it for the rest of the frame that collected it; the
+     * next frame pins it again. */
+    if ((mask & JP3_TRAINER_AMMO) && player_ok && ammo >= 0 && ammo <= 2)
         glue_poke8(a0 + JP3_PLAYER_AMMO, (uint8_t)ammo);
     s_jump_button_held = held;
 }
@@ -344,7 +348,7 @@ const GameSpec g_game_spec = {
     .on_frame_pre           = NULL,
     .on_frame_post          = NULL,
     .trainer_labels         = jp3_trainer_labels,
-    .trainer_item_count     = 7,
+    .trainer_item_count     = 8,
     .trainer_apply          = jp3_trainer_apply,
     .trainer_choice_title   = "AMMO TYPE",
     .trainer_choice_values  = jp3_ammo_labels,
