@@ -51,7 +51,7 @@
 #define JP3_INVULN_FRAMES   99u
 
 /* $D4(player) is the selected ammo type: 0 apple, 1 strawberry, 2 orange,
- * 3 pudding, 4 blueberry. That is the whole set: the pickup handler at
+ * 3 pudding, 4 cupcake. That is the whole set: the pickup handler at
  * $AFDEA derives the type as the item id minus $15, the extra-ammo score
  * table at $AFE3A has five entries, and the HUD icon pointer table at
  * $BC084 has five fruit entries. $D5(player) is the simultaneous-shot
@@ -84,7 +84,7 @@ static const char *const jp3_trainer_labels[] = {
 };
 
 static const char *const jp3_ammo_labels[] = {
-    "APPLE", "STRAWBERRY", "ORANGE", "PUDDING", "BLUEBERRY", NULL
+    "APPLE", "STRAWBERRY", "ORANGE", "PUDDING", "CUPCAKE", NULL
 };
 
 static int s_jump_button_held;

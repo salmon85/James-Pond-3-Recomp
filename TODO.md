@@ -276,7 +276,7 @@
       `$0A1704`/`$0A1714` force `$FCFB` across the two tests only and restore
       it before `$F888` is written, so no other reader ever sees it. The
       trainer also adds an "ammo type override" switch plus a Left/Right
-      choice row (`AMMO TYPE`: apple, strawberry, orange, pudding, blueberry)
+      choice row (`AMMO TYPE`: apple, strawberry, orange, pudding, cupcake)
       that pins the byte `$D4(player)`; the shot handler builds
       `$800|($15+$D4)` and the HUD reads `$D4+1`. The five types are the whole
       set: the pickup handler `$AFDEA` derives the type as the item id minus
@@ -286,7 +286,7 @@
       `$F99E=$9C664` and `$E263=0`; with it on, `$E263=2`, the level exits,
       and `$FCFB` is back to 0. With the override off, slot 1 kept its own
       orange ammo and fired `$0817`; with it on, C spawned `$0815`-`$0819` for
-      apple, strawberry, orange, pudding and blueberry, and the HUD icon
+      apple, strawberry, orange, pudding and cupcake, and the HUD icon
       followed (`$E387` 1-5). Slots 1-5 ran 2,000 frames each with all toggles
       on and `GENESIS_STRICT_JSR_STACK=1`, zero mismatches, and
       `floor_unsafe.toml`/`dispatch_misses.toml` empty.
