@@ -36,6 +36,7 @@
 #include "png_write.h"
 #include "runtime_evidence.h"
 #include "local_states.h"
+#include "trainer.h"
 
 /* =========================================================================
  * Path helper: resolve filenames relative to the exe directory.
@@ -2899,6 +2900,7 @@ int main(int argc, char *argv[])
      * The own backend has no clownmdemu instance — glue keeps s_emu NULL and
      * routes everything through g_machine. */
     glue_init(rom_raw, rom_raw_len);
+    trainer_init(g_game_spec.trainer_labels, g_game_spec.trainer_item_count);
 
     /* Audio arch overhaul: initialise our cycle-stamped YM2612 + PSG
      * instances. Safe to call on oracle too (init functions are idempotent
@@ -3247,6 +3249,25 @@ session_begin:;
 #endif
             if (ev.type == SDL_QUIT) { running = 0; window_close_requested = 1; break; }
             if (ev.type == SDL_KEYDOWN) {
+                /* Trainer menu: T opens/closes. While open, arrows, Enter/
+                 * Space and Esc drive the menu and are not passed to the
+                 * game (the simulation tick is skipped below). */
+                if (!ev.key.repeat && ev.key.keysym.sym == SDLK_t &&
+                    !(ev.key.keysym.mod & (KMOD_SHIFT | KMOD_CTRL | KMOD_ALT | KMOD_GUI))) {
+                    trainer_menu_set_open(!trainer_menu_open());
+                    continue;
+                }
+                if (trainer_menu_open()) {
+                    switch (ev.key.keysym.sym) {
+                    case SDLK_UP:     trainer_menu_move(-1); break;
+                    case SDLK_DOWN:   trainer_menu_move(1);  break;
+                    case SDLK_RETURN:
+                    case SDLK_SPACE:  trainer_toggle_selected(); break;
+                    case SDLK_ESCAPE: trainer_menu_set_open(0); break;
+                    default: break;
+                    }
+                    continue;
+                }
                 if (!ev.key.repeat && !(ev.key.keysym.mod & (KMOD_SHIFT | KMOD_CTRL)) &&
                     ev.key.keysym.sym == SDLK_F7) {
                     overlay_request = 2; continue;
@@ -3453,6 +3474,8 @@ session_begin:;
           else
 #endif
           collect_sim_input(&sim_in);
+          if (g_game_spec.trainer_apply)
+              g_game_spec.trainer_apply(trainer_mask());
           GenesisSimAudio sim_audio = {
               (int16_t *)s_fm_accum,  FM_ACCUM_FRAMES,  &s_fm_count,
               (int16_t *)s_psg_accum, PSG_ACCUM_FRAMES, &s_psg_count };
@@ -3467,7 +3490,9 @@ session_begin:;
 #if GENESIS_HAS_RECOMP_NET
           Uint64 tick_t0 = SDL_GetPerformanceCounter();
 #endif
-          int completed = genesis_sim_step(&sim_in, &sim_audio, &sim_hooks);
+          int completed = 1;
+          if (!trainer_menu_open())
+              completed = genesis_sim_step(&sim_in, &sim_audio, &sim_hooks);
 #if GENESIS_HAS_RECOMP_NET
           if (genesis_netplay_rollback_active())
               genesis_netplay_rb_note_live_tick_us((uint32_t)((SDL_GetPerformanceCounter() - tick_t0) *
@@ -3773,6 +3798,15 @@ session_begin:;
             present_src = s_present_buf;
         }
 #endif
+        if (trainer_menu_open()) {
+            if (present_src != s_present_buf) {
+                memcpy(s_present_buf, present_src,
+                       (size_t)s_frame_stride * MAX_SCREEN_HEIGHT * sizeof(uint32_t));
+                present_src = s_present_buf;
+            }
+            trainer_draw(s_present_buf, MAX_SCREEN_WIDTH, MAX_SCREEN_HEIGHT,
+                         s_screen_width, s_screen_height);
+        }
         update_render_logical_size(renderer);
         SDL_RenderClear(renderer);
 

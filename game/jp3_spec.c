@@ -22,6 +22,39 @@
 #define JP3_HBLANK_PC  0xFFFFFD0Au
 #define JP3_VBLANK_PC  0xFFFFFD10u
 
+/* Trainer toggles (T menu). Health is a current/max word pair; a lost life
+ * resets max to 3, so the health toggle restores both words every frame.
+ * Lives are only raised to 9, never lowered, so a larger legit count stays. */
+#define JP3_RAM_LIVES       0xFFFA9Eu
+#define JP3_RAM_HEALTH      0xFFFAA0u
+#define JP3_RAM_MAX_HEALTH  0xFFFAA2u
+#define JP3_RAM_FROG_LIVES  0xFFFB86u
+
+enum {
+    JP3_TRAINER_LIVES      = 1u << 0,
+    JP3_TRAINER_HEALTH     = 1u << 1,
+    JP3_TRAINER_FROG_LIVES = 1u << 2,
+};
+
+static const char *const jp3_trainer_labels[] = {
+    "INFINITE LIVES",
+    "INFINITE HEALTH",
+    "INFINITE FROG LIVES",
+    NULL
+};
+
+static void jp3_trainer_apply(uint32_t mask)
+{
+    if ((mask & JP3_TRAINER_LIVES) && glue_peek16(JP3_RAM_LIVES) < 9)
+        glue_poke16(JP3_RAM_LIVES, 9);
+    if ((mask & JP3_TRAINER_FROG_LIVES) && glue_peek16(JP3_RAM_FROG_LIVES) < 9)
+        glue_poke16(JP3_RAM_FROG_LIVES, 9);
+    if (mask & JP3_TRAINER_HEALTH) {
+        glue_poke16(JP3_RAM_MAX_HEALTH, 5);
+        glue_poke16(JP3_RAM_HEALTH, 5);
+    }
+}
+
 static void jp3_call_entry_point(void) { recomp_call_addr(JP3_ENTRY_PC); }
 static void jp3_call_vblank(void)      { recomp_call_addr(JP3_VBLANK_PC); }
 static void jp3_call_hblank(void)      { recomp_call_addr(JP3_HBLANK_PC); }
@@ -223,6 +256,9 @@ const GameSpec g_game_spec = {
     .on_post_reset          = NULL,
     .on_frame_pre           = NULL,
     .on_frame_post          = NULL,
+    .trainer_labels         = jp3_trainer_labels,
+    .trainer_item_count     = 3,
+    .trainer_apply          = jp3_trainer_apply,
     .on_hblank              = NULL,
 
     .handle_arg             = NULL,

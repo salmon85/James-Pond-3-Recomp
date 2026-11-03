@@ -82,6 +82,13 @@ SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
   ./JamesPond3Recomp jp3.md --turbo --input-script ../tools/jump_probe.input
 ```
 
+## Trainer
+
+Press `T` while playing to open the trainer menu. `Up`/`Down` select,
+`Enter` or `Space` toggles, `T` or `Esc` closes. The toggles are infinite
+lives, infinite health (also grants the maximum five health) and infinite
+frog lives. They stay enabled across levels and save loads until you quit.
+
 ## Save states
 
 `Shift+F1..F9` saves, `F1..F9` loads; on a gamepad, LB saves slot 1 and RB

@@ -204,6 +204,16 @@
       and the `$0AC53E` continuation; 1,561 frames now run with a stable A7
       and zero floor, dispatch, or stack events.
 
+- [x] In-game trainer menu (`T`): infinite lives, infinite health (current
+      and max health held at 5 so a lost life cannot reset the bar), and
+      infinite frog lives. The runner owns the menu, selection and overlay;
+      the game supplies the labels and `jp3_trainer_apply` for
+      `$FFFA9E`/`$FFFAA0`/`$FFFAA2`/`$FFFB86`. Toggles live in host state,
+      so they survive level changes and save loads. Verified with a live
+      X11 menu run, a level reload with health still on, and RAM dumps
+      showing poked 1s restored to 9 lives / 5 health / 9 frog lives,
+      while an empty mask leaves poked values untouched.
+
 ## Final step
 
 - [ ] Create a standalone setup/builder program that asks the user for the

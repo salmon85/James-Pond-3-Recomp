@@ -50,6 +50,7 @@ genesisrecomp_runner_sources(JP3_RUNNER_SOURCES TRACE ON)
 add_executable(JamesPond3Recomp
     ${JP3_RUNNER_SOURCES}
     ${JP3_GENERATED_SOURCES}
+    "${RUNNER_ROOT}/trainer.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/game/jp3_spec.c"
 )
 

@@ -192,6 +192,15 @@ typedef struct GameSpec {
     void      (*on_frame_pre)(uint64_t frame_count);
     void      (*on_frame_post)(uint64_t frame_count);
 
+    /* ---- Trainer menu (T) ---- */
+    /* Optional game-supplied toggle labels. The engine owns the menu and
+     * keeps the enabled bitmask in host state, so toggles survive level
+     * changes and save loads. trainer_apply receives the bitmask once per
+     * frame with bit N corresponding to trainer_labels[N]. NULL = no menu. */
+    const char *const *trainer_labels;
+    int                 trainer_item_count;
+    void              (*trainer_apply)(uint32_t enabled_mask);
+
     /* Called every HBlank with the line number. Almost always NULL —
      * games that need per-line state should poke their own state
      * inside call_hblank instead. */
