@@ -88,9 +88,11 @@ Press `T` while playing to open the trainer menu. `Up`/`Down` select,
 `Enter` or `Space` toggles, `T` or `Esc` closes. The toggles are infinite
 lives, infinite health (also grants the maximum five health), infinite
 frog lives, infinite jumps (each press of the jump button in mid-air
-boosts you upward again) and infinite jetpack fuel (hold jump with the
-jetpack equipped to fly without the tank draining). They stay enabled
-across levels and save loads until you quit.
+boosts you upward again), infinite jetpack fuel (hold jump with the
+jetpack equipped to fly without the tank draining) and infinite
+invulnerability (the damage immunity you get at level start and after a
+hit never expires). They stay enabled across levels and save loads until
+you quit.
 
 ## Save states
 

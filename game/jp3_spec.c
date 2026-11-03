@@ -40,12 +40,19 @@
 #define JP3_RAM_BUTTON_B    0xFFF9BAu
 #define JP3_AIR_JUMP_VELOCITY 0x000AA000u   /* ~sqrt(2) x the stock $78000 */
 
+/* $96(player) is the level-start / post-hit invulnerability countdown (100
+ * frames). The damage routine ignores hits while it is 1..100, so holding it
+ * at 100 keeps the same protection permanently. */
+#define JP3_PLAYER_INVULN   0x96u
+#define JP3_INVULN_FRAMES   100u
+
 enum {
     JP3_TRAINER_LIVES        = 1u << 0,
     JP3_TRAINER_HEALTH       = 1u << 1,
     JP3_TRAINER_FROG_LIVES   = 1u << 2,
     JP3_TRAINER_INFINITE_JUMPS = 1u << 3,
     JP3_TRAINER_JETPACK_FUEL   = 1u << 4,
+    JP3_TRAINER_INVULN         = 1u << 5,
 };
 
 static const char *const jp3_trainer_labels[] = {
@@ -54,6 +61,7 @@ static const char *const jp3_trainer_labels[] = {
     "INFINITE FROG LIVES",
     "INFINITE JUMPS",
     "INFINITE JETPACK FUEL",
+    "INFINITE INVULNERABILITY",
     NULL
 };
 
@@ -81,6 +89,8 @@ static void jp3_trainer_apply(uint32_t mask)
      * zero keeps the gauge full and the flight from cutting out. */
     if ((mask & JP3_TRAINER_JETPACK_FUEL) && player_ok)
         glue_poke8(a0 + JP3_PLAYER_JETPACK_FUEL, 0);
+    if ((mask & JP3_TRAINER_INVULN) && player_ok)
+        glue_poke16(a0 + JP3_PLAYER_INVULN, JP3_INVULN_FRAMES);
     s_jump_button_held = held;
 }
 
@@ -286,7 +296,7 @@ const GameSpec g_game_spec = {
     .on_frame_pre           = NULL,
     .on_frame_post          = NULL,
     .trainer_labels         = jp3_trainer_labels,
-    .trainer_item_count     = 5,
+    .trainer_item_count     = 6,
     .trainer_apply          = jp3_trainer_apply,
     .on_hblank              = NULL,
 

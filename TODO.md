@@ -228,6 +228,15 @@
       past 1,200 frames (y=390) where the untoggled run stalls at ~frame
       540. HUD canister stays full, strict stack stays balanced, and
       `$FFFD10` remains intact.
+- [x] Trainer: infinite invulnerability. `$96(player)` is the level-start /
+      post-hit immunity countdown (the game sets it to 100) and the damage
+      routine at `$0B356C` ignores hits while it is 1..100, so holding it at
+      100 keeps the protection on. Verified on slot 1: the timer counts
+      77 -> 0 with the toggle off but stays at 98..100 with it on. Verified
+      on slot 2 with a walk-into-enemies script: health falls 5 -> 4 -> 3 ->
+      2 -> 1 -> 0 with the toggle off but stays 5 for the whole run with it
+      on. A 1,800-frame slot-1 run had no strict-stack mismatches, no
+      unrunnable RAM code, and `$FFFD10` intact.
 
 - [x] Slot 1 crashed a few hundred frames after loading its later-area save:
       A7 walked down 4 bytes per frame until it overwrote the `$FFFD10`
