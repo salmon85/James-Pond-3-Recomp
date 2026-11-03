@@ -41,10 +41,14 @@
 #define JP3_AIR_JUMP_VELOCITY 0x000AA000u   /* ~sqrt(2) x the stock $78000 */
 
 /* $96(player) is the level-start / post-hit invulnerability countdown (100
- * frames). The damage routine ignores hits while it is 1..100, so holding it
- * at 100 keeps the same protection permanently. */
+ * frames). The damage routine ignores hits while it is 1..100, so any value
+ * in that range protects permanently. Hold 99, not 100: $0B41E2 decrements
+ * the counter and at exactly 100 replays the level music. A per-frame host
+ * write can land between the decrement and that compare, so 100 retriggers
+ * the music at random. 99 never produces that value and still leaves the
+ * counter above zero when the player update runs twice in one frame. */
 #define JP3_PLAYER_INVULN   0x96u
-#define JP3_INVULN_FRAMES   100u
+#define JP3_INVULN_FRAMES   99u
 
 enum {
     JP3_TRAINER_LIVES        = 1u << 0,

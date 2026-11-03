@@ -230,13 +230,21 @@
       `$FFFD10` remains intact.
 - [x] Trainer: infinite invulnerability. `$96(player)` is the level-start /
       post-hit immunity countdown (the game sets it to 100) and the damage
-      routine at `$0B356C` ignores hits while it is 1..100, so holding it at
-      100 keeps the protection on. Verified on slot 1: the timer counts
-      77 -> 0 with the toggle off but stays at 98..100 with it on. Verified
+      routine at `$0B356C` ignores hits while it is 1..100, so holding it in
+      that range keeps the protection on. Holding 100 retriggered the level
+      music: `$0B41E2` decrements the counter and at exactly 100 takes the
+      "expired" branch that replays the track, and a per-frame host write can
+      land between the decrement and that compare. Hold 99 instead: it can
+      never produce the 100 that branch tests, and it stays above zero when
+      the player update runs twice in one frame (the same script with 2 let a
+      hit through after two decrements). Verified on slot 1: the timer counts
+      77 -> 0 with the toggle off but stays at 98..99 with it on; the
+      LEFT+jump script that produced a music start at wall 460 in every
+      100-pin run (`$FBE4` = 2, `$FBE6` rewritten) produces none. Verified
       on slot 2 with a walk-into-enemies script: health falls 5 -> 4 -> 3 ->
       2 -> 1 -> 0 with the toggle off but stays 5 for the whole run with it
-      on. A 1,800-frame slot-1 run had no strict-stack mismatches, no
-      unrunnable RAM code, and `$FFFD10` intact.
+      on. A 2,700-frame slot-1 run with all six toggles had no strict-stack
+      mismatches and `$FFFD10` intact.
 
 - [x] Slot 1 crashed a few hundred frames after loading its later-area save:
       A7 walked down 4 bytes per frame until it overwrote the `$FFFD10`
