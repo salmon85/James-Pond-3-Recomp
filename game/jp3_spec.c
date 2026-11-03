@@ -51,7 +51,7 @@
 #define JP3_INVULN_FRAMES   99u
 
 /* $D4(player) is the selected ammo type (0 apple, 1 strawberry, 2 orange,
- * 3 the fourth fruit). $D5(player) is the simultaneous-shot limit, not a
+ * 3 cupcake). $D5(player) is the simultaneous-shot limit, not a
  * count. The shot handler builds $800|($15+$D4) and the health-bar icon is
  * $D4+1, so the trainer only overrides the type byte and leaves the game's
  * ammo otherwise untouched. */
@@ -81,7 +81,7 @@ static const char *const jp3_trainer_labels[] = {
 };
 
 static const char *const jp3_ammo_labels[] = {
-    "APPLE", "STRAWBERRY", "ORANGE", NULL
+    "APPLE", "STRAWBERRY", "ORANGE", "CUPCAKE", NULL
 };
 
 static int s_jump_button_held;
@@ -118,7 +118,7 @@ static void jp3_trainer_apply(uint32_t mask, int ammo)
     /* Pin the gun to the trainer's ammo type while the override is on. A
      * pickup rewrites it for the rest of the frame that collected it; the
      * next frame pins it again. */
-    if ((mask & JP3_TRAINER_AMMO) && player_ok && ammo >= 0 && ammo <= 2)
+    if ((mask & JP3_TRAINER_AMMO) && player_ok && ammo >= 0 && ammo <= 3)
         glue_poke8(a0 + JP3_PLAYER_AMMO, (uint8_t)ammo);
     s_jump_button_held = held;
 }
@@ -352,7 +352,7 @@ const GameSpec g_game_spec = {
     .trainer_apply          = jp3_trainer_apply,
     .trainer_choice_title   = "AMMO TYPE",
     .trainer_choice_values  = jp3_ammo_labels,
-    .trainer_choice_count   = 3,
+    .trainer_choice_count   = 4,
     .on_hblank              = NULL,
 
     .handle_arg             = NULL,
