@@ -124,15 +124,19 @@ void trainer_draw(uint32_t *dst, int stride, int height,
     if (s_choice_count > 0) {
         int iy = y + 26 + s_count * 18;
         int sel = (s_selected == s_count);
+        /* Right-align the value block so long fruit names never run into
+         * the arrows or the border. */
+        int vw = (int)strlen(s_choice_values[s_choice]) * 8;
+        int vx = x + w - 20 - vw;
         if (sel)
             gen_ovl_draw_text(dst, stride, screen_h, x + 8, iy, ">", gold, 1);
         gen_ovl_draw_text(dst, stride, screen_h, x + 18, iy,
                           s_choice_title, sel ? gold : white, 1);
-        gen_ovl_draw_text(dst, stride, screen_h, x + w - 88, iy,
+        gen_ovl_draw_text(dst, stride, screen_h, vx - 16, iy,
                           "<", sel ? gold : white, 1);
-        gen_ovl_draw_text(dst, stride, screen_h, x + w - 78, iy,
+        gen_ovl_draw_text(dst, stride, screen_h, vx, iy,
                           s_choice_values[s_choice], sel ? gold : white, 1);
-        gen_ovl_draw_text(dst, stride, screen_h, x + w - 12, iy,
+        gen_ovl_draw_text(dst, stride, screen_h, vx + vw + 8, iy,
                           ">", sel ? gold : white, 1);
     }
 }

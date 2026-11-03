@@ -94,9 +94,10 @@ invulnerability (the damage immunity you get at level start and after a
 hit never expires), "exit level from pause" (the pause menu's B command
 normally only works after the level has been completed) and "ammo type
 override". `Left`/`Right` on the AMMO TYPE row pick the gun's ammo (apple,
-strawberry, orange or cupcake); while the override is on the gun always
-fires the chosen type, and with it off the gun keeps whatever ammo the game
-gives you. They stay enabled across levels and save loads until you quit.
+strawberry, orange, pudding or blueberry); while the override is on the gun
+always fires the chosen type, and with it off the gun keeps whatever ammo
+the game gives you. They stay enabled across levels and save loads until you
+quit.
 
 ## Save states
 
