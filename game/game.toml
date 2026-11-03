@@ -77,6 +77,19 @@ kind = "game_hook"
 addr = 0x0AE14C
 kind = "game_hook"
 
+# Pause menu ($0A16EE) accepts B ("exit area") only when the level-completion
+# flag $FCFB or the exit-tile flag $F842 is set; $0A1710 otherwise clears B
+# from the accepted-button mask. The trainer's "exit level from pause" option
+# forces $FCFB across the two tests and restores it at $0A1714, so no other
+# reader of $FCFB ever observes the temporary value.
+[[widescreen_site]]
+addr = 0x0A1704
+kind = "game_hook"
+
+[[widescreen_site]]
+addr = 0x0A1714
+kind = "game_hook"
+
 [functions]
 # Vector-table seeds are automatic; the game entry reached by the stock init
 # routine's JSR is listed explicitly because it is the real main routine.

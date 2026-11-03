@@ -2901,6 +2901,9 @@ int main(int argc, char *argv[])
      * routes everything through g_machine. */
     glue_init(rom_raw, rom_raw_len);
     trainer_init(g_game_spec.trainer_labels, g_game_spec.trainer_item_count);
+    trainer_set_choice(g_game_spec.trainer_choice_title,
+                       g_game_spec.trainer_choice_values,
+                       g_game_spec.trainer_choice_count);
 
     /* Audio arch overhaul: initialise our cycle-stamped YM2612 + PSG
      * instances. Safe to call on oracle too (init functions are idempotent
@@ -3261,6 +3264,8 @@ session_begin:;
                     switch (ev.key.keysym.sym) {
                     case SDLK_UP:     trainer_menu_move(-1); break;
                     case SDLK_DOWN:   trainer_menu_move(1);  break;
+                    case SDLK_LEFT:   trainer_menu_adjust(-1); break;
+                    case SDLK_RIGHT:  trainer_menu_adjust(1);  break;
                     case SDLK_RETURN:
                     case SDLK_SPACE:  trainer_toggle_selected(); break;
                     case SDLK_ESCAPE: trainer_menu_set_open(0); break;
@@ -3475,7 +3480,7 @@ session_begin:;
 #endif
           collect_sim_input(&sim_in);
           if (g_game_spec.trainer_apply)
-              g_game_spec.trainer_apply(trainer_mask());
+              g_game_spec.trainer_apply(trainer_mask(), trainer_choice());
           GenesisSimAudio sim_audio = {
               (int16_t *)s_fm_accum,  FM_ACCUM_FRAMES,  &s_fm_count,
               (int16_t *)s_psg_accum, PSG_ACCUM_FRAMES, &s_psg_count };

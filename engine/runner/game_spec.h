@@ -199,7 +199,14 @@ typedef struct GameSpec {
      * frame with bit N corresponding to trainer_labels[N]. NULL = no menu. */
     const char *const *trainer_labels;
     int                 trainer_item_count;
-    void              (*trainer_apply)(uint32_t enabled_mask);
+    void              (*trainer_apply)(uint32_t enabled_mask, int choice);
+
+    /* Optional extra row: a titled list of values the player cycles with
+     * Left/Right. trainer_apply's `choice` is the selected index (0 when no
+     * choice row is configured). */
+    const char         *trainer_choice_title;
+    const char *const  *trainer_choice_values;
+    int                 trainer_choice_count;
 
     /* Called every HBlank with the line number. Almost always NULL —
      * games that need per-line state should poke their own state

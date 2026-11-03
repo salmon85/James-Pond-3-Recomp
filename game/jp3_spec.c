@@ -50,6 +50,12 @@
 #define JP3_PLAYER_INVULN   0x96u
 #define JP3_INVULN_FRAMES   99u
 
+/* $D4(player) is the selected ammo type (0 apple, 1 orange, 2 cupcake,
+ * 3 the fourth type the game never names in the intro text). $D5(player) is
+ * the simultaneous-shot limit, not a count. The shot handler builds
+ * $800|($15+$D4) and the gun counts live projectiles of that type. */
+#define JP3_PLAYER_AMMO     0xD4u
+
 enum {
     JP3_TRAINER_LIVES        = 1u << 0,
     JP3_TRAINER_HEALTH       = 1u << 1,
@@ -57,6 +63,7 @@ enum {
     JP3_TRAINER_INFINITE_JUMPS = 1u << 3,
     JP3_TRAINER_JETPACK_FUEL   = 1u << 4,
     JP3_TRAINER_INVULN         = 1u << 5,
+    JP3_TRAINER_EXIT_LEVEL     = 1u << 6,
 };
 
 static const char *const jp3_trainer_labels[] = {
@@ -66,13 +73,23 @@ static const char *const jp3_trainer_labels[] = {
     "INFINITE JUMPS",
     "INFINITE JETPACK FUEL",
     "INFINITE INVULNERABILITY",
+    "EXIT LEVEL FROM PAUSE",
     NULL
+};
+
+static const char *const jp3_ammo_labels[] = {
+    "APPLE", "ORANGE", "CUPCAKE", NULL
 };
 
 static int s_jump_button_held;
 
-static void jp3_trainer_apply(uint32_t mask)
+/* Set by the trainer each frame; read by the pause-menu input hook. */
+static int s_exit_level_enabled;
+
+static void jp3_trainer_apply(uint32_t mask, int ammo)
 {
+    s_exit_level_enabled = (mask & JP3_TRAINER_EXIT_LEVEL) != 0;
+
     if ((mask & JP3_TRAINER_LIVES) && glue_peek16(JP3_RAM_LIVES) < 9)
         glue_poke16(JP3_RAM_LIVES, 9);
     if ((mask & JP3_TRAINER_FROG_LIVES) && glue_peek16(JP3_RAM_FROG_LIVES) < 9)
@@ -95,6 +112,10 @@ static void jp3_trainer_apply(uint32_t mask)
         glue_poke8(a0 + JP3_PLAYER_JETPACK_FUEL, 0);
     if ((mask & JP3_TRAINER_INVULN) && player_ok)
         glue_poke16(a0 + JP3_PLAYER_INVULN, JP3_INVULN_FRAMES);
+    /* Pin the gun to the trainer's ammo type. A pickup rewrites it for the
+     * rest of the frame that collected it; the next frame pins it again. */
+    if (player_ok && ammo >= 0 && ammo <= 2)
+        glue_poke8(a0 + JP3_PLAYER_AMMO, (uint8_t)ammo);
     s_jump_button_held = held;
 }
 
@@ -115,8 +136,31 @@ static int s_busreq_depth;
  * returns. Perform the epilogue inline so the original JSR wrapper still owns
  * the return-address pop; calling it through recomp_call_addr() leaves that
  * slot behind and leaks 4 bytes of guest stack per decompression. */
+static int s_fcfb_patched;
+static uint8_t s_fcfb_saved;
+
 static int jp3_instruction_hook(uint32_t pc)
 {
+    /* The pause-menu input builder ($0A16EE) masks B out of the accepted
+     * button latch $F888 at $0A1710 unless the level-completed flag $FCFB
+     * (or the exit-tile flag $F842) is set. The trainer's exit option forces
+     * $FCFB for the two instructions that test it and restores the original
+     * value at $0A1714, so the level-load/end-text readers never see it. */
+    if (pc == 0x0A1704u) {
+        if (s_exit_level_enabled && !s_fcfb_patched) {
+            s_fcfb_saved = glue_peek8(0xFFFCFB);
+            glue_poke8(0xFFFCFB, 1);
+            s_fcfb_patched = 1;
+        }
+        return 0;
+    }
+    if (pc == 0x0A1714u) {
+        if (s_fcfb_patched) {
+            glue_poke8(0xFFFCFB, s_fcfb_saved);
+            s_fcfb_patched = 0;
+        }
+        return 0;
+    }
     if (pc == 0x0AE14Cu) {
         /* Boss-death debrief: $0AE14C jumps straight to the text window and
          * never runs the level-exit plane-B clear at $0B5832, so the arena
@@ -300,8 +344,11 @@ const GameSpec g_game_spec = {
     .on_frame_pre           = NULL,
     .on_frame_post          = NULL,
     .trainer_labels         = jp3_trainer_labels,
-    .trainer_item_count     = 6,
+    .trainer_item_count     = 7,
     .trainer_apply          = jp3_trainer_apply,
+    .trainer_choice_title   = "AMMO TYPE",
+    .trainer_choice_values  = jp3_ammo_labels,
+    .trainer_choice_count   = 3,
     .on_hblank              = NULL,
 
     .handle_arg             = NULL,

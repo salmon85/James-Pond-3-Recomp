@@ -91,8 +91,11 @@ frog lives, infinite jumps (each press of the jump button in mid-air
 boosts you upward again), infinite jetpack fuel (hold jump with the
 jetpack equipped to fly without the tank draining) and infinite
 invulnerability (the damage immunity you get at level start and after a
-hit never expires). They stay enabled across levels and save loads until
-you quit.
+hit never expires) and "exit level from pause" (the pause menu's B command
+normally only works after the level has been completed). `Left`/`Right` on
+the AMMO TYPE row pick the gun's ammo (apple, orange or cupcake); the gun
+always fires that type. They stay enabled across levels and save loads
+until you quit.
 
 ## Save states
 

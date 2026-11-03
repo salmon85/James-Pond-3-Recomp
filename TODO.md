@@ -269,6 +269,22 @@
       ran 13,166 frames with `GENESIS_STRICT_JSR_STACK=1`, zero mismatches,
       and zero dispatch/floor evidence entries; `$FFFD10` intact.
 
+- [x] Trainer: exit a level from the pause menu before completing it, and
+      pick the fruit gun's ammo. The pause input builder `$0A16EE` clears B
+      from the accepted-button mask at `$0A1710` unless `$FCFB` (level
+      completed) or `$F842` (exit tile) is set. The new game hook sites
+      `$0A1704`/`$0A1714` force `$FCFB` across the two tests only and restore
+      it before `$F888` is written, so no other reader ever sees it. The
+      trainer also adds a Left/Right choice row (`AMMO TYPE`: apple, orange,
+      cupcake) that pins the byte `$D4(player)` every frame; the shot handler
+      builds `$800|($15+$D4)` and the HUD reads `$D4+1`. Verified: with the
+      exit bit off, B during the pause window leaves `$F99E=$9C664` and
+      `$E263=0`; with it on, `$E263=2`, the level exits, and `$FCFB` is back
+      to 0. With the gun attached to the player, C spawned type `$0815`,
+      `$0816` and `$0817` for apple, orange and cupcake. Slots 1-5 ran 2,000
+      frames each with all toggles on and `GENESIS_STRICT_JSR_STACK=1`, zero
+      mismatches, and `floor_unsafe.toml`/`dispatch_misses.toml` empty.
+
 ## Final step
 
 - [ ] Create a standalone setup/builder program that asks the user for the
