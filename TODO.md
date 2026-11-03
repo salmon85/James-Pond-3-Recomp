@@ -291,6 +291,17 @@
       on and `GENESIS_STRICT_JSR_STACK=1`, zero mismatches, and
       `floor_unsafe.toml`/`dispatch_misses.toml` empty.
 
+- [x] Loading the 22:02 slot-1 map save returned to a black screen with the
+      music still playing. The save is a mid-frame snapshot taken between
+      filling the record queue at `$5874` and its `$FF5E30` trampoline pass;
+      the first record's `+$10` word (`$0D0C`) is executed as a 2-byte
+      opcode, the RAM capsule rejects it, and the map loop stalls. The
+      portable-load fixup now drops the first pending queue slot when the
+      save is in map mode, so the reloaded loop refills it. Slot 1 now
+      reloads, moves on the map, and enters Butterscotch Glen and the KFF
+      boss level; slots 2-5 still load, and the user's save files are
+      unchanged.
+
 ## Final step
 
 - [ ] Create a standalone setup/builder program that asks the user for the

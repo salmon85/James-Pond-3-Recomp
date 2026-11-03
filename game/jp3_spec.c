@@ -246,6 +246,16 @@ static void jp3_portable_load_fixup(void)
      * $0B5EA0. */
     g_cpu.A[6] = 0x00C00000u;
 
+    /* A map save can land between filling the record queue at $5874 and its
+     * $FF5E30 trampoline pass. The first record's +$10 word is then executed
+     * as a 2-byte opcode; the stale $0D0C in the 22:02 slot-1 save killed the
+     * RAM capsule and left a black screen. The resumed map loop refills the
+     * queue, so drop its first pending slot. */
+    if (g_ram[0x2799] == 0) {
+        g_ram[0x5884] = 0;
+        g_ram[0x5885] = 0;
+    }
+
     int freed = 0;
     if (g_ram[0xFCEC] == 0xFF && g_ram[0xFCED] == 0xFF &&
         g_ram[0xFCEE] == 0xFA && g_ram[0xFCEF] == 0x06) {
