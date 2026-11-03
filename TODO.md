@@ -257,6 +257,18 @@
       `GENESIS_STRICT_JSR_STACK=1` and zero mismatches, `$FFFD10` intact,
       and zero dispatch/floor/interior-label evidence entries.
 
+- [x] Slot 1's boss arena had no boss. The five type-$04 objects (behavior
+      $5C) sat frozen because the tier-3 capsule declined their handler
+      `$0AD432` (floor evidence: exit_pc `$0AD45C` != native return
+      `$0A9322`). Promoted the handler, its six `bra.w` ladder slots, the
+      `pea.l` continuation `$0AD45C`, and the six state bodies, plus the
+      sibling boss-part behaviors `$5D`-`$60` (`$0AD78E`, the `$0AD812`
+      ladder and bodies, `$0ADA96`, `$0ADABE`). The doctor-on-flying-cow
+      intro now fires (`$0AD72E`: music track 3, control locked), the mech
+      descends, follows the player, and lands hits. Slot 1 plus slots 2-5
+      ran 13,166 frames with `GENESIS_STRICT_JSR_STACK=1`, zero mismatches,
+      and zero dispatch/floor evidence entries; `$FFFD10` intact.
+
 ## Final step
 
 - [ ] Create a standalone setup/builder program that asks the user for the

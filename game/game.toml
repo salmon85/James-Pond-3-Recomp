@@ -242,6 +242,42 @@ late_extra = [
     0x0AB786,   # $0AB6D6 state body 3
     0x0AB7E2,   # $0AB6D6 state body 4
     0x0AB6F4,   # $0AB6D6 state body RTS target (pea.l $ab6f4)
+    # Boss handler (behavior $5C, the doctor on the flying cow in the slot-1
+    # arena) reached only through the $0A9320 `jsr (a5)`. It pushes the
+    # $0AD45C continuation and jumps through `jmp $ad464(pc,d0.w)`; the
+    # tier-3 capsule declined the entry (exit_pc $0AD45C != native $0A9322
+    # return), leaving every type-4 object frozen and the $0AD72E intro
+    # (music track 3, player control locked, state 4) never firing.
+    0x0AD432,   # boss handler, behavior pointer $0CB0EC
+    0x0AD464,   # $0AD432 state ladder slot 0 (bra.w)
+    0x0AD468,   # $0AD432 state ladder slot 1 (bra.w)
+    0x0AD46C,   # $0AD432 state ladder slot 2 (bra.w)
+    0x0AD470,   # $0AD432 state ladder slot 3 (bra.w)
+    0x0AD474,   # $0AD432 state ladder slot 4 (bra.w)
+    0x0AD478,   # $0AD432 state ladder slot 5 (bra.w)
+    0x0AD45C,   # $0AD432 `pea.l` continuation (st.b $14; jmp $0A94EE)
+    0x0AD47C,   # $0AD432 state body 0
+    0x0AD4AC,   # $0AD432 state body 1
+    0x0AD4B2,   # $0AD432 state body 2
+    0x0AD4E2,   # $0AD432 state body 3
+    0x0AD4E8,   # $0AD432 state body 4
+    0x0AD556,   # $0AD432 state body 5
+    # The other boss-part behaviors ($5D-$60) in the same cluster. $5D was
+    # already reached at runtime (floor miss exit_pc $0A8EFC) while the cow
+    # mech animated, and $5E adds its own `pea`-return ladder.
+    0x0AD78E,   # boss part handler, behavior pointer $0CB128 ($5D)
+    0x0AD812,   # boss part handler, behavior pointer $0CB164 ($5E)
+    0x0AD83E,   # $0AD812 state ladder slot 0 (bra.w)
+    0x0AD842,   # $0AD812 state ladder slot 1 (bra.w)
+    0x0AD846,   # $0AD812 state ladder slot 2 (bra.w)
+    0x0AD84A,   # $0AD812 state ladder slot 3 (bra.w)
+    0x0AD83A,   # $0AD812 `pea.l` continuation (jmp $0A94EE)
+    0x0AD84E,   # $0AD812 state body 0
+    0x0AD878,   # $0AD812 state body 1
+    0x0AD88A,   # $0AD812 state body 2
+    0x0AD8CE,   # $0AD812 state body 3
+    0x0ADA96,   # boss part handler, behavior pointer $0CB1A0 ($5F)
+    0x0ADABE,   # boss part handler, behavior pointer $0CB1DC ($60)
     # Common projectile/enemy behavior entries and their jump-table targets,
     # seen as interior-label misses while fired apples and white orbs sat
     # still. Each target decodes to a real instruction, so promote it instead
