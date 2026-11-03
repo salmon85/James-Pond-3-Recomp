@@ -221,6 +221,13 @@
       climb from y=4080 to y=3525 while the same script with the toggle off
       does one normal jump; 1,200+ further frames run with no strict-stack
       mismatch and `$FFFD10` intact.
+- [x] Trainer: infinite jetpack fuel. Flight drains the player's `$D3`
+      fuel counter (`$FFFAD9`) from 0 to 128 over ~540 frames, then the
+      jetpack cuts out. Holding that byte at 0 while the toggle is on
+      keeps the gauge full and the flight going; slot 1 climbs from y=3941
+      past 1,200 frames (y=390) where the untoggled run stalls at ~frame
+      540. HUD canister stays full, strict stack stays balanced, and
+      `$FFFD10` remains intact.
 
 - [x] Slot 1 crashed a few hundred frames after loading its later-area save:
       A7 walked down 4 bytes per frame until it overwrote the `$FFFD10`

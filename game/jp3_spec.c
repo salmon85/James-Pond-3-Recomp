@@ -36,6 +36,7 @@
 #define JP3_RAM_PLAYER_PTR  0xFFFCECu
 #define JP3_PLAYER_JUMPING  0x3Du
 #define JP3_PLAYER_VELOCITY 0x30u
+#define JP3_PLAYER_JETPACK_FUEL 0xD3u
 #define JP3_RAM_BUTTON_B    0xFFF9BAu
 #define JP3_AIR_JUMP_VELOCITY 0x000AA000u   /* ~sqrt(2) x the stock $78000 */
 
@@ -44,6 +45,7 @@ enum {
     JP3_TRAINER_HEALTH       = 1u << 1,
     JP3_TRAINER_FROG_LIVES   = 1u << 2,
     JP3_TRAINER_INFINITE_JUMPS = 1u << 3,
+    JP3_TRAINER_JETPACK_FUEL   = 1u << 4,
 };
 
 static const char *const jp3_trainer_labels[] = {
@@ -51,6 +53,7 @@ static const char *const jp3_trainer_labels[] = {
     "INFINITE HEALTH",
     "INFINITE FROG LIVES",
     "INFINITE JUMPS",
+    "INFINITE JETPACK FUEL",
     NULL
 };
 
@@ -68,11 +71,16 @@ static void jp3_trainer_apply(uint32_t mask)
     }
 
     int held = glue_peek8(JP3_RAM_BUTTON_B) != 0;
+    uint32_t a0 = glue_peek32(JP3_RAM_PLAYER_PTR) & 0xFFFFFFu;
+    int player_ok = a0 >= 0xFF0000u;
     if ((mask & JP3_TRAINER_INFINITE_JUMPS) && held && !s_jump_button_held) {
-        uint32_t a0 = glue_peek32(JP3_RAM_PLAYER_PTR) & 0xFFFFFFu;
-        if (a0 >= 0xFF0000u && glue_peek8(a0 + JP3_PLAYER_JUMPING) != 0)
+        if (player_ok && glue_peek8(a0 + JP3_PLAYER_JUMPING) != 0)
             glue_poke32(a0 + JP3_PLAYER_VELOCITY, JP3_AIR_JUMP_VELOCITY);
     }
+    /* The jetpack fuel counter only ever rises while flying; holding it at
+     * zero keeps the gauge full and the flight from cutting out. */
+    if ((mask & JP3_TRAINER_JETPACK_FUEL) && player_ok)
+        glue_poke8(a0 + JP3_PLAYER_JETPACK_FUEL, 0);
     s_jump_button_held = held;
 }
 
@@ -278,7 +286,7 @@ const GameSpec g_game_spec = {
     .on_frame_pre           = NULL,
     .on_frame_post          = NULL,
     .trainer_labels         = jp3_trainer_labels,
-    .trainer_item_count     = 4,
+    .trainer_item_count     = 5,
     .trainer_apply          = jp3_trainer_apply,
     .on_hblank              = NULL,
 
