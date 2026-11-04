@@ -347,6 +347,13 @@ const GameSpec g_game_spec = {
     .call_vblank            = jp3_call_vblank,
     .call_hblank            = jp3_call_hblank,
 
+    /* The enemy-heavy level loop occasionally overruns the NTSC
+     * 127,856-cycle wall frame while jumping, which drops a logic tick and
+     * reads as stutter. 5/4 gives the main program headroom so the VBlank
+     * gate stays 1:1; IRQ, DMA, raster and Z80 timing stay native. */
+    .main_cpu_speed_num     = 5u,
+    .main_cpu_speed_den     = 4u,
+
     /* Fallback for portable loads: the map/overworld frame loop. Level saves
      * are routed to $0B72C8 by save_resume_pc. Same-process saves restore the
      * suspended fiber snapshot and skip both. */

@@ -302,6 +302,21 @@
       boss level; slots 2-5 still load, and the user's save files are
       unchanged.
 
+- [x] Slot 2 jump stutter: with the enemy-heavy level loaded, the main loop
+      occasionally misses the VBlank tick (11 gaps in 1,200 wall frames, all
+      mid-jump, while the host stayed at 60). Per-frame 68K work measured
+      ~140k cycles against the NTSC 127,856-cycle wall frame, so the fiber
+      reaches the next VBlank still inside the loop. Added opt-in
+      `main_cpu_speed_num`/`main_cpu_speed_den` to the game spec (`5/4` for
+      JP3): each scheduler slice budget is enlarged by the ratio with a
+      fractional carry, while IRQ, DMA, raster and sound clocks stay native.
+      Verified: jump script now enters the level loop 1,679/1,679 wall frames
+      (was 1,665), 90-jump all-cheats traversal 5,878/~5,879 (was 5,838),
+      takeoff/apex (Y 2091 -> 2025) unchanged; slots 1-5, 1,200-frame boot,
+      6,000-frame stress and `GENESIS_STRICT_JSR_STACK=1` all clean with zero
+      audio drops. A 300-second real-audio all-cheats session held 59.942 fps
+      with `audio_overflow_drops=0`.
+
 ## Final step
 
 - [ ] Create a standalone setup/builder program that asks the user for the

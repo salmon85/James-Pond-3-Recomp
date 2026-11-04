@@ -242,11 +242,14 @@ typedef struct GameSpec {
      * continuation that must run before the skip is applied. NULL = never. */
     int       (*rts_continuation)(uint32_t rts_pc, uint32_t addr);
 
-    /* Opt-in main-program CPU headroom, queried at each scheduler slice.
-     * NULL / <=1 = exact native timing. IRQ, DMA, raster and sound clocks
-     * stay native. A game must retain its real VBlank wait as the tick gate.
+    /* Opt-in main-program CPU headroom as a rational speed: num/den guest
+     * cycles per native cycle (5/4 = 1.25x). 0 or num<=den = exact native
+     * timing. Each scheduler slice budget is enlarged; IRQ, DMA, raster and
+     * Z80 clocks stay native, while 68K audio-write stamps follow the guest
+     * counter. A game must retain its real VBlank wait as the tick gate.
      * Use only for enhanced simulation, never as a native accuracy fix. */
-    unsigned  (*main_cpu_divisor)(void);
+    unsigned  main_cpu_speed_num;
+    unsigned  main_cpu_speed_den;
 
     /* ---- Frame-record packing (debug ring buffer) ---- */
     /* Pack game-specific telemetry into the 256-byte tail of each

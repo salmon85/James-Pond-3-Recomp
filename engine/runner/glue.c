@@ -646,9 +646,8 @@ static int create_game_fiber(uint32_t resume_pc)
 /* Scanline interleave state */
 #include "main_cpu_clock.h"
 static MainCpuClock s_main_cpu_clock;
-static unsigned s_main_cpu_divisor = 1;
-static uint32_t s_main_cpu_stalls;
-static int s_irq_in_progress = 0; /* also excludes interleaved IRQs from acceleration */
+static unsigned s_main_cpu_speed_num = 1, s_main_cpu_speed_den = 1;
+static int s_irq_in_progress = 0; /* tracks interleaved IRQ execution */
 static int32_t s_cycle_budget = 0;
 static int     s_game_yielded_vblank = 0;
 /* Consecutive per-scanline chunks that returned before resuming the game
@@ -752,12 +751,15 @@ void glue_run_game_chunk(cc_u32f cycles)
     }
 
     s_chunk_cycles = cycles;
-    unsigned divisor = g_game_spec.main_cpu_divisor ? g_game_spec.main_cpu_divisor() : 1;
-    if (!divisor) divisor = 1;
-    if (divisor != s_main_cpu_divisor) s_main_cpu_clock.remainder = 0;
-    s_main_cpu_divisor = divisor;
-    s_main_cpu_stalls = 0;
-    s_cycle_budget = (int32_t)cycles;
+    unsigned num = g_game_spec.main_cpu_speed_num;
+    unsigned den = g_game_spec.main_cpu_speed_den;
+    if (!den || num <= den) { num = den = 1; }
+    if (num != s_main_cpu_speed_num || den != s_main_cpu_speed_den)
+        s_main_cpu_clock.remainder = 0;
+    s_main_cpu_speed_num = num;
+    s_main_cpu_speed_den = den;
+    s_cycle_budget = (int32_t)main_cpu_budget(&s_main_cpu_clock,
+                                              (uint32_t)cycles, num, den);
     s_budget_cyc_seen = g_audio_cycle_counter;  /* drain from here (see check_cycle_budget) */
     s_interleave_active = 1;
     instruction_watchdog_reset();
@@ -785,16 +787,6 @@ static void check_cycle_budget(void)
 {
     if (s_interleave_active && !s_in_vblank_service) {
         uint32_t now = g_audio_cycle_counter;
-        if (s_main_cpu_divisor > 1 && !s_irq_in_progress && now > s_budget_cyc_seen) {
-            uint32_t elapsed = now - s_budget_cyc_seen;
-            uint32_t scaled = main_cpu_elapsed(&s_main_cpu_clock, elapsed,
-                                               s_main_cpu_stalls, s_main_cpu_divisor);
-            /* Normalize BEFORE the bus operation stamps sound writes. Merely
-             * enlarging the budget would send audio events into future frames. */
-            g_audio_cycle_counter -= elapsed - scaled;
-            now = g_audio_cycle_counter;
-        }
-        s_main_cpu_stalls = 0;
         if (now > s_budget_cyc_seen)
             s_cycle_budget -= (int32_t)(now - s_budget_cyc_seen);
         s_budget_cyc_seen = now;   /* also re-syncs after the per-frame reset */
@@ -822,8 +814,6 @@ static void check_cycle_budget(void)
 void glue_charge_68k_stall(uint32_t cycles)
 {
     g_audio_cycle_counter += cycles;
-    if (s_interleave_active && !s_in_vblank_service)
-        s_main_cpu_stalls += cycles;
 }
 
 /* Called from Clown68000_Interrupt during Iterate when VBlank/HBlank fires. */
@@ -1525,8 +1515,8 @@ void glue_restart_game_fiber(uint32_t resume_pc)
 #endif
     s_interleave_active = 0;
     s_cycle_budget = 0;
-    s_main_cpu_divisor = 1;
-    s_main_cpu_clock.remainder = s_main_cpu_stalls = 0;
+    s_main_cpu_speed_num = s_main_cpu_speed_den = 1;
+    s_main_cpu_clock.remainder = 0;
     s_chunk_cycles = 0;
     s_irq_cycle_debt = 0;
     s_irq_cycle_debt_level = 0;
@@ -2446,7 +2436,7 @@ typedef struct GlueRbSched {
     uint32_t game_fiber_resume_pc;
     int32_t  yield_site;
     uint32_t main_cpu_clock_remainder;
-    uint32_t main_cpu_divisor, main_cpu_stalls;
+    uint32_t main_cpu_speed_num, main_cpu_speed_den;
     int32_t  irq_in_progress, cycle_budget, game_yielded_vblank;
     uint32_t irq_cycle_debt;
     int32_t  irq_cycle_debt_level;
@@ -2494,8 +2484,8 @@ size_t glue_rb_sched_save(void *dst, size_t cap)
     s.game_fiber_resume_pc = s_game_fiber_resume_pc;
     s.yield_site           = (int32_t)s_yield_site;
     s.main_cpu_clock_remainder = s_main_cpu_clock.remainder;
-    s.main_cpu_divisor     = s_main_cpu_divisor;
-    s.main_cpu_stalls      = s_main_cpu_stalls;
+    s.main_cpu_speed_num   = s_main_cpu_speed_num;
+    s.main_cpu_speed_den   = s_main_cpu_speed_den;
     s.irq_in_progress      = s_irq_in_progress;
     s.cycle_budget         = s_cycle_budget;
     s.game_yielded_vblank  = s_game_yielded_vblank;
@@ -2547,8 +2537,8 @@ int glue_rb_sched_load(const void *src, size_t len)
     s_game_fiber_resume_pc      = s.game_fiber_resume_pc;
     s_yield_site                = (GlueYieldSite)s.yield_site;
     s_main_cpu_clock.remainder  = s.main_cpu_clock_remainder;
-    s_main_cpu_divisor          = s.main_cpu_divisor;
-    s_main_cpu_stalls           = s.main_cpu_stalls;
+    s_main_cpu_speed_num        = s.main_cpu_speed_num;
+    s_main_cpu_speed_den        = s.main_cpu_speed_den;
     s_irq_in_progress           = s.irq_in_progress;
     s_cycle_budget              = s.cycle_budget;
     s_game_yielded_vblank       = s.game_yielded_vblank;
