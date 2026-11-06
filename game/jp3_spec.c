@@ -265,6 +265,16 @@ static void jp3_portable_load_fixup(void)
         }
     }
 
+    /* Scene $5A is the ending: its dossier pages are static plane-B screens
+     * whose init clears the level scroll ($BD2B8). A save taken mid-page
+     * carries the level camera's $F8EC, and the script blocks before the next
+     * VSRAM flush, so the paper renders split/wrapped. Restore the page
+     * scroll before the resumed loop writes VSRAM. */
+    if (g_ram[0xF844] == 0x00 && g_ram[0xF845] == 0x5A) {
+        g_ram[0xF8EC] = 0;
+        g_ram[0xF8ED] = 0;
+    }
+
     /* Saves written by builds that never ran the boot block at $0B563A carry
      * garbage where the A/B/C press pointers belong. $0B6EDE then copies the
      * joypad edges into random RAM and jump/attack/sprint never arrive at

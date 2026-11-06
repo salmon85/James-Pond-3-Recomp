@@ -341,3 +341,13 @@
       6,000-frame stress and `GENESIS_STRICT_JSR_STACK=1` all clean with zero
       audio drops. A 300-second real-audio all-cheats session held 59.942 fps
       with `audio_overflow_drops=0`.
+
+- [x] Slot 2's ending save drew the "TOP SECRET" dossier paper split/wrapped:
+      the ending page init clears the level scroll at `$BD2B8`, but the save
+      carries the level camera's plane-B vertical scroll (`$F8EC=$90`) and
+      the blocked script never reaches the next VSRAM flush. The portable
+      load fixup now clears `$F8EC/$F8ED` only for scene `$5A`; slot 2's
+      paper is whole and centered at the reference position (x104-215,
+      y40-183), and slots 1/3/4/5 render frame-identical. The move/attack and
+      jump probes (12,121 / 14,221 frames) report zero dispatch, floor-unsafe,
+      or interior-label misses.
