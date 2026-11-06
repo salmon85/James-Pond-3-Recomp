@@ -94,6 +94,7 @@ static void addrset_sort(AddrSet *s) {
 typedef enum {
     JMPAUDIT_STATIC_TARGET = 0,      /* JMP with statically-known target */
     JMPAUDIT_IN_FUNCTION_SWITCH,     /* (PC,Dn.W) resolved to in-function switch+goto */
+    JMPAUDIT_BRA_LADDER_SWITCH,      /* self-relative (PC,Dn.W) bra ladder -> switch+goto */
     JMPAUDIT_FALLBACK_HYBRID,        /* (PC,Dn.W) punted to hybrid_jmp_interpret */
     JMPAUDIT_DYNAMIC_REGISTER,       /* JMP (An) / JMP (d16,An) / similar — not table */
     JMPAUDIT_UNSUPPORTED,            /* Decode succeeded but emitter couldn't handle */
@@ -1304,16 +1305,71 @@ static int probe_offset_table_targets(const GenesisRom *rom,
 }
 
 /* =========================================================================
+ * probe_self_relative_bra_ladder — decode the bra-ladder tail of a
+ * self-relative `JMP (d8=-2, PC, Xn.W)`.
+ *
+ * With d8 == -2 the EA base lands on the JMP itself, so the slots sit in
+ * the instruction stream right after it (base = JMP addr, first slot at
+ * JMP addr + instr length). Dn is the byte offset from the JMP, so the
+ * dispatch values are 4, 8, 12, ... for bra.w slots (2, 4, 6, ... for
+ * bra.s). Each slot is a trampoline into a handler body, so the caller
+ * seeds those handlers into the host function's CFG and emits an
+ * in-function switch+goto. That keeps the dispatch out of the tier-3
+ * capsule, which does not pop a pending `pea` continuation and leaks
+ * 4 guest-stack bytes per call.
+ *
+ * Outputs the Dn case values and the bra destinations (handler bodies).
+ * ========================================================================= */
+static int probe_self_relative_bra_ladder(const GenesisRom *rom,
+                                          const M68KInstr *jmp_instr,
+                                          int32_t  *out_offsets,
+                                          uint32_t *out_targets,
+                                          int max_targets)
+{
+    if (!rom || max_targets <= 0)              return 0;
+    if (jmp_instr->word_count < 2)             return 0;
+    /* Self-relative only: d8 == -2 makes the computed base the JMP addr. */
+    if ((int8_t)(jmp_instr->words[1] & 0xFF) != -2) return 0;
+
+    uint32_t base     = jmp_instr->addr;
+    uint32_t ladder   = base + (uint32_t)jmp_instr->byte_length;
+    M68KInstr first;
+    if (!m68k_decode(rom, ladder, &first))          return 0;
+    if (first.mnemonic != MN_BRA || !first.has_target) return 0;
+    uint32_t stride = first.byte_length;     /* 2 = bra.s, 4 = bra.w */
+    if (stride != 2 && stride != 4)            return 0;
+
+    int n = 0;
+    for (int i = 0; i < max_targets; i++) {
+        uint32_t slot = ladder + (uint32_t)i * stride;
+        M68KInstr e;
+        if (!m68k_decode(rom, slot, &e)) break;
+        if (e.mnemonic != MN_BRA || !e.has_target) break;
+        if (e.byte_length != stride) break;
+        if ((e.target_addr & 1) || e.target_addr >= rom->rom_size) break;
+        out_offsets[n] = (int32_t)(slot - base);
+        out_targets[n] = e.target_addr;
+        n++;
+    }
+    return n;
+}
+
+/* =========================================================================
  * seed_pc_idx_dispatch_targets — discover JMP(PC,Dn.W) dispatch targets at
  * scan time, without depending on a disasm-generated label list.
  *
- * Adds interior PCs to the CFG-walker worklist for two patterns:
+ * Adds interior PCs to the CFG-walker worklist for three patterns:
  *
- *   (1) Duff's device — base is the first of a uniform sequence of 2-byte
+ *   (1) Self-relative bra ladder — `jmp (d8=-2,PC,Dn.W)` dispatches into a
+ *       run of bra.s/bra.w slots right after it. Seeds each slot's bra
+ *       destination and marks it forced, so the host function can contain
+ *       the handler bodies even when they sit past a neighbouring entry.
+ *
+ *   (2) Duff's device — base is the first of a uniform sequence of 2-byte
  *       instructions. Threshold: 8+ consecutive identical opcode words.
  *       Seeds base+0, base+2, ..., base+2*(N-1).
  *
- *   (2) Offset table — `dc.w (target - base)` rows, target = base + offset,
+ *   (3) Offset table — `dc.w (target - base)` rows, target = base + offset,
  *       all targets within [start_addr, plausible_end) and decode as valid
  *       M68K instructions. Seeds the resolved targets (NOT the table bytes).
  *
@@ -1332,6 +1388,8 @@ static int probe_offset_table_targets(const GenesisRom *rom,
 static void seed_pc_idx_dispatch_targets(const GenesisRom *rom,
                                          const M68KInstr *jmp_instr,
                                          AddrSet *worklist,
+                                         AddrSet *labels,
+                                         AddrSet *forced,
                                          uint32_t start_addr,
                                          const uint32_t *sorted_funcs,
                                          int nfuncs)
@@ -1344,6 +1402,25 @@ static void seed_pc_idx_dispatch_targets(const GenesisRom *rom,
     int8_t   d8   = (int8_t)(ext & 0xFF);
     uint32_t base = (uint32_t)(jmp_instr->addr + 2 + (int32_t)d8);
     if (!rom || base + 1 >= rom->rom_size) return;
+
+    /* Self-relative bra ladder: seed every handler as a forced in-function
+     * target so the codegen switch can `goto` it. Forced targets bypass the
+     * neighbour-territory test — the verified bra slots prove these are
+     * part of this dispatcher's control flow. */
+    if (d8 == -2) {
+        int32_t  offs[64];
+        uint32_t tgts[64];
+        int nb = probe_self_relative_bra_ladder(rom, jmp_instr, offs, tgts,
+                                                (int)(sizeof(tgts) / sizeof(tgts[0])));
+        if (nb >= 2) {
+            for (int i = 0; i < nb; i++) {
+                addrset_insert(worklist, tgts[i]);
+                addrset_insert(labels,   tgts[i]);
+                addrset_insert(forced,   tgts[i]);
+            }
+            return;
+        }
+    }
 
     /* Duff's-device probe runs FIRST without function-range bounds. The
      * 8+ uniform-opcode threshold is self-bounding, and the dispatched
@@ -1407,8 +1484,9 @@ static void scan_function(const GenesisRom *rom, uint32_t start_addr,
                           const GameConfig *cfg) {
     /* Worklist-based CFG walk */
     s_scan_hit_invalid = false;
-    AddrSet worklist;
+    AddrSet worklist, forced;
     addrset_init(&worklist);
+    addrset_init(&forced);
     addrset_insert(&worklist, start_addr);
     M68KValidatorOptions vopts = {0};
     vopts.allow_68020_branch = cfg ? cfg->allow_68020_branch : false;
@@ -1435,8 +1513,9 @@ static void scan_function(const GenesisRom *rom, uint32_t start_addr,
     while (worklist.count > 0) {
         uint32_t pc = worklist.addrs[--worklist.count];
 
-        /* Don't follow addresses that belong to another function */
-        if (pc != start_addr &&
+        /* Don't follow addresses that belong to another function — except a
+         * forced bra-ladder handler, which this dispatcher provably owns. */
+        if (pc != start_addr && !addrset_contains(&forced, pc) &&
             addr_belongs_to_other_function(pc, start_addr, sorted_funcs, nfuncs)) {
             if (extern_targets) addrset_insert(extern_targets, pc);
             continue;
@@ -1456,7 +1535,7 @@ static void scan_function(const GenesisRom *rom, uint32_t start_addr,
              * dispatch miss (RKA's $693E scroll-table builder lost its two
              * per-frame fill loops to bogus entry $697A → frozen background).
              * Decode through it and record the diagnostic instead. */
-            if (pc != start_addr &&
+            if (pc != start_addr && !addrset_contains(&forced, pc) &&
                 addr_is_function_entry(pc, sorted_funcs, nfuncs))
                 break;
 
@@ -1501,8 +1580,9 @@ static void scan_function(const GenesisRom *rom, uint32_t start_addr,
                      * (d8,PC,Xn) JMP, try to discover Duff's-device or
                      * offset-table targets at the JMP base and seed them
                      * so the codegen probes find them in instrs. */
-                    seed_pc_idx_dispatch_targets(rom, &instr, &worklist,
-                                                 start_addr, sorted_funcs, nfuncs);
+                    seed_pc_idx_dispatch_targets(rom, &instr, &worklist, labels,
+                                                 &forced, start_addr,
+                                                 sorted_funcs, nfuncs);
                 }
                 goto next_work;
 
@@ -1568,6 +1648,7 @@ static void scan_function(const GenesisRom *rom, uint32_t start_addr,
     }
 
     addrset_free(&worklist);
+    addrset_free(&forced);
 }
 
 /* A callable address is not necessarily a new function boundary. Shared
@@ -2261,13 +2342,16 @@ static void emit_instr(FILE *f, const GenesisRom *rom,
             emit_split_tail_call_expr(f, "  ", ae, *has_sp_adjust != 0,
                                       estimate_cycles(instr));
         } else if (mode == 7 && reg == 3) {
-            /* JMP (d8,PC,Xn) — indexed jump.  Three patterns we recognise:
+            /* JMP (d8,PC,Xn) — indexed jump.  Four patterns we recognise:
              *   (a) Duff's device: the table base is the first of a uniform
              *       sequence of in-function instructions (CPZ/HPZ scroll).
              *   (b) Offset table to interior labels: `dc.w (target - base)`
              *       entries point to anonymous local labels of the same
              *       function (ObjB2_* DEZ-boss state machines).
-             *   (c) Anything else (e.g. bra.w-trampoline / function-entry
+             *   (c) Self-relative bra ladder: d8 == -2 puts the base on the
+             *       JMP itself; the bra slots start right after it and the
+             *       scan seeds their handlers as in-function labels.
+             *   (d) Anything else (e.g. bra.w-trampoline / function-entry
              *       tables, where the target IS a registered function):
              *       runtime dispatch via hybrid_jmp_interpret. */
             uint32_t pc_addr = instr->addr + er.bp;
@@ -2290,6 +2374,20 @@ static void emit_instr(FILE *f, const GenesisRom *rom,
                 not_ = probe_offset_table_targets(rom, instr, instrs,
                                                   ot_offsets, ot_targets,
                                                   (int)(sizeof(ot_targets) / sizeof(ot_targets[0])));
+            }
+            int32_t  bl_offsets[64];
+            uint32_t bl_targets[64];
+            int nbl = 0, nbl_ok = 0;
+            if (npc < 2 && not_ < 1) {
+                nbl = probe_self_relative_bra_ladder(rom, instr,
+                                                     bl_offsets, bl_targets,
+                                                     (int)(sizeof(bl_targets) / sizeof(bl_targets[0])));
+                /* The switch gotos require every handler to be a label in
+                 * this function's emitted instruction set. */
+                nbl_ok = nbl >= 2;
+                for (int t = 0; t < nbl && nbl_ok; t++)
+                    if (!addrset_contains(instrs, bl_targets[t]))
+                        nbl_ok = 0;
             }
             if (npc >= 2) {
                 /* Case (a): Duff's-device-style in-function switch. */
@@ -2343,8 +2441,32 @@ static void emit_instr(FILE *f, const GenesisRom *rom,
                         "m68k_brief_index_value(0x%04Xu, g_cpu.D[%d], g_cpu.A[%d])); return;\n",
                         base, ext, xreg, xreg);
                 fprintf(f, "  }\n");
+            } else if (nbl_ok) {
+                /* Case (c): self-relative bra ladder. scan_function seeded
+                 * every handler into this function's CFG, so the switch can
+                 * goto them natively and stay out of the tier-3 capsule
+                 * (which does not pop a pending `pea` continuation). */
+                audit_record(instr->addr, func_addr, base,
+                             JMPAUDIT_BRA_LADDER_SWITCH, nbl);
+                fprintf(f, "  /* JMP table at $%06X: in-function dispatch — self-relative bra ladder, base $%06X + %s[%d], %d slots */\n",
+                        instr->addr, base, xr + 6 /* skip "g_cpu." */, xreg, nbl);
+                emit_cycle_accounting(f, "  ", estimate_cycles(instr));
+                fprintf(f, "  switch ((int32_t)m68k_brief_index_value(0x%04Xu, "
+                        "g_cpu.D[%d], g_cpu.A[%d])) {\n", ext, xreg, xreg);
+                for (int t = 0; t < nbl; t++) {
+                    fprintf(f, "    case %d:\n", bl_offsets[t]);
+                    /* The real CPU also executes the slot's bra (10 cycles). */
+                    emit_cycle_accounting(f, "      ", 10);
+                    fprintf(f, "      goto label_%06X;\n", bl_targets[t]);
+                }
+                fprintf(f, "    default: %s", *has_sp_adjust ?
+                        "g_split_sp_popped += _sp_popped; _sp_popped = 0; " : "");
+                fprintf(f, "hybrid_jmp_interpret(0x%08Xu + "
+                        "m68k_brief_index_value(0x%04Xu, g_cpu.D[%d], g_cpu.A[%d])); return;\n",
+                        base, ext, xreg, xreg);
+                fprintf(f, "  }\n");
             } else {
-                /* Case (c): nothing recognised — fall back to runtime dispatch. */
+                /* Case (d): nothing recognised — fall back to runtime dispatch. */
                 audit_record(instr->addr, func_addr, base,
                              JMPAUDIT_FALLBACK_HYBRID, 0);
                 fprintf(f, "  /* JMP table at $%06X: interpret handler at base $%06X + %s[%d] */\n",
@@ -5330,13 +5452,14 @@ bool codegen_emit(const GenesisRom *rom, const FunctionList *funcs,
             }                                                                    \
         } while (0)
 
-        int n_static = 0, n_switch = 0, n_dyn_reg = 0, n_unsupp = 0;
+        int n_static = 0, n_switch = 0, n_switch_bra = 0, n_dyn_reg = 0, n_unsupp = 0;
         int n_fb_func = 0, n_fb_bra = 0, n_fb_off = 0,
             n_fb_interior = 0, n_fb_external = 0;
         for (int i = 0; i < s_jmp_audit_count; i++) {
             switch (s_jmp_audit_arr[i].kind) {
                 case JMPAUDIT_STATIC_TARGET:        n_static++; break;
                 case JMPAUDIT_IN_FUNCTION_SWITCH:   n_switch++; break;
+                case JMPAUDIT_BRA_LADDER_SWITCH:    n_switch_bra++; break;
                 case JMPAUDIT_DYNAMIC_REGISTER:     n_dyn_reg++; break;
                 case JMPAUDIT_UNSUPPORTED:          n_unsupp++; break;
                 case JMPAUDIT_FALLBACK_HYBRID: {
@@ -5360,6 +5483,7 @@ bool codegen_emit(const GenesisRom *rom, const FunctionList *funcs,
             fprintf(fa, "# Summary:\n");
             fprintf(fa, "#   static_target          %5d  (JMP with statically resolved target — safe)\n", n_static);
             fprintf(fa, "#   in_function_switch     %5d  (JMP(PC,Dn.W) compiled to in-function switch+goto — safe, this is the Duff's-device fix)\n", n_switch);
+            fprintf(fa, "#   bra_ladder_switch      %5d  (JMP(PC,Dn.W) self-relative bra ladder compiled to in-function switch+goto — safe)\n", n_switch_bra);
             fprintf(fa, "#   dynamic_register       %5d  (JMP (An)/(d,An)/(An,Xn) — runtime address from register, safe via call_by_address)\n", n_dyn_reg);
             fprintf(fa, "#   fallback_hybrid                — JMP(PC,Dn.W) routed through hybrid_jmp_interpret; subdivided:\n");
             fprintf(fa, "#     function_entry       %5d    (base IS a registered function — call_by_address resolves it directly)\n", n_fb_func);
@@ -5384,6 +5508,8 @@ bool codegen_emit(const GenesisRom *rom, const FunctionList *funcs,
                     case JMPAUDIT_STATIC_TARGET:      kind = "static_target"; break;
                     case JMPAUDIT_IN_FUNCTION_SWITCH: kind = "in_function_switch";
                         snprintf(sub, sizeof(sub), " targets=%d", e->n_targets); break;
+                    case JMPAUDIT_BRA_LADDER_SWITCH:  kind = "bra_ladder_switch";
+                        snprintf(sub, sizeof(sub), " targets=%d", e->n_targets); break;
                     case JMPAUDIT_DYNAMIC_REGISTER:   kind = "dynamic_register"; break;
                     case JMPAUDIT_UNSUPPORTED:        kind = "unsupported"; break;
                     case JMPAUDIT_FALLBACK_HYBRID: {
@@ -5399,8 +5525,8 @@ bool codegen_emit(const GenesisRom *rom, const FunctionList *funcs,
                         e->jmp_addr, e->func_addr, e->base, kind, sub);
             }
             fclose(fa);
-            printf("[Codegen] Dispatch audit: %d sites (%d static, %d switch, %d hybrid {fn=%d, bra.w=%d, offset_table=%d, interior=%d, ext=%d}, %d dyn_reg, %d unsupp)\n",
-                   s_jmp_audit_count, n_static, n_switch,
+            printf("[Codegen] Dispatch audit: %d sites (%d static, %d switch, %d bra_ladder, %d hybrid {fn=%d, bra.w=%d, offset_table=%d, interior=%d, ext=%d}, %d dyn_reg, %d unsupp)\n",
+                   s_jmp_audit_count, n_static, n_switch, n_switch_bra,
                    n_fb_func + n_fb_bra + n_fb_off + n_fb_interior + n_fb_external,
                    n_fb_func, n_fb_bra, n_fb_off, n_fb_interior, n_fb_external,
                    n_dyn_reg, n_unsupp);

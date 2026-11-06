@@ -153,12 +153,18 @@
       already collapsed to a wild value (`A7=$000022`, `$FFFD10` holding stack
       bytes), so they were stack-corruption artifacts, not a real dispatcher
       offset. Slots 2-5 now run 700 frames each with zero misses.
-- [ ] The tier-3 capsule accepts an interior-label miss when a `pea`
-      continuation is on top of A7, but the native computed-JMP caller does
-      not pop it; the result is a 4-byte-per-call guest-stack leak. Promoting
-      each computed-jump ladder entry avoids it. The recompiler should emit an
-      in-function switch for `jmp (pc,d0.w)` tables (same class as the
-      `$0BD496` item above).
+- [x] The tier-3 capsule accepted an interior-label miss when a `pea`
+      continuation was on top of A7, but the native computed-JMP caller did
+      not pop it; the result was a 4-byte-per-call guest-stack leak. The
+      recompiler now recognises the self-relative `jmp (d8=-2,pc,d0.w)` bra
+      ladder: the CFG scan seeds each slot's `bra` destination as a forced
+      in-function label and the JMP emitter generates a switch that `goto`s
+      the handler directly, charging the skipped `bra`'s 10 cycles. The three
+      remaining sites `$0B76B0` (43 slots), `$0BDBE8` (3) and `$0BDC4C` (6)
+      are now `bra_ladder_switch`; the dispatch audit reports 0
+      `INTERIOR_UNRESOLVED`. Boot plus move/attack/jump probes ran 36,783
+      frames with 0 dispatch misses, 0 interior-label misses and 0
+      floor-unsafe entries.
 - [ ] Validate later areas, enemies, and level completion against NTSC MAME.
 - [x] The development `--wav` capture always reported 0 bytes because the
       input-script EXIT path returned from `main()` before the cleanup that
