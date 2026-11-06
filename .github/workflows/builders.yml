@@ -81,6 +81,7 @@ jobs:
              tools/builder/README.md tools/builder/NOTICES.txt \
              tools/builder/jp3-builder.desktop tools/builder/jp3-builder.png AppDir/
           cp -a toolchain AppDir/toolchain
+          cp tools/builder/zig-toolchain.cmake AppDir/toolchain/
           cp tools/builder/NINJA-COPYING.txt AppDir/toolchain/
           cp -a sdl2 AppDir/sdl2
           cp engine/runner/external/SDL2/SDL2-2.28.5/COPYING.txt AppDir/sdl2/
