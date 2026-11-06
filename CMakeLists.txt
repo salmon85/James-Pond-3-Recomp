@@ -1,6 +1,19 @@
 cmake_minimum_required(VERSION 3.16)
 project(JamesPond3Recomp VERSION 0.1.0 LANGUAGES C CXX)
 
+# Zig ships no separate ar/ranlib; use its LLVM archiver. These rules must be
+# set after project(): Platform/Windows-GNU redefines them during it.
+if(CMAKE_C_COMPILER MATCHES "zig")
+    foreach(_lang C CXX)
+        set(CMAKE_${_lang}_ARCHIVE_CREATE
+            "<CMAKE_AR> ar qc <TARGET> <LINK_FLAGS> <OBJECTS>")
+        set(CMAKE_${_lang}_ARCHIVE_APPEND
+            "<CMAKE_AR> ar q <TARGET> <LINK_FLAGS> <OBJECTS>")
+        set(CMAKE_${_lang}_ARCHIVE_FINISH
+            "<CMAKE_RANLIB> ranlib <TARGET>")
+    endforeach()
+endif()
+
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
@@ -25,6 +38,18 @@ if(WIN32)
         "${RUNNER_ROOT}/external/SDL2/SDL2-2.28.5/cmake")
 endif()
 find_package(SDL2 REQUIRED)
+
+# SDL2 2.28 marks WinMain undefined with the GNU `--undefined=SYM` spelling,
+# which Zig's MinGW linker rejects. `-u` is accepted by both GNU ld and lld.
+if(WIN32 AND CMAKE_C_COMPILER MATCHES "zig" AND TARGET SDL2::SDL2main)
+    if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+        set(_sdl2main_u "-Wl,-u,_WinMain@16")
+    else()
+        set(_sdl2main_u "-Wl,-u,WinMain")
+    endif()
+    set_property(TARGET SDL2::SDL2main PROPERTY INTERFACE_LINK_OPTIONS
+        "${_sdl2main_u}")
+endif()
 
 # SDL2 headers are included as <SDL2/SDL.h>; Homebrew points the include dir
 # at .../include/SDL2, so add its parent as well.
