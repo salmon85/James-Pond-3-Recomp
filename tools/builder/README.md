@@ -34,3 +34,4 @@ The game is written to `James Pond 3 Recomp` in the current directory.
 - The compiler, CMake, Ninja and SDL2 are bundled; nothing needs to be
   installed.
 - Sources: https://github.com/salmon85/James-Pond-3-Recomp
+- Bundled third-party notices: `NOTICES.txt`.

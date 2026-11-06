@@ -1,0 +1,26 @@
+Third-party components bundled with this builder
+
+This builder redistributes the following unmodified tools so it can compile
+the game without anything installed on the user's machine:
+
+  Zig 0.14.1                    MIT
+    toolchain/zig/LICENSE
+
+  CMake 4.3.4                   BSD 3-Clause
+    toolchain/cmake/share/cmake-4.3/Licenses
+    toolchain/cmake/doc/cmake/LICENSE.rst
+
+  Ninja 1.13.2                  Apache License 2.0
+    toolchain/NINJA-COPYING.txt
+
+  Simple DirectMedia Layer 2.28.5   zlib
+    sdl2/COPYING.txt (and sdl2/share/licenses on Linux)
+
+The recompiled game source in source.tar.gz is covered by the licenses in
+that tree, primarily:
+    engine/LICENSE.md
+    engine/THIRD-PARTY-LICENSES.md
+
+James Pond 3: Operation Starfish is a trademark of its respective owners.
+This builder contains no game ROM and no game assets; the user supplies the
+ROM, which is read locally and never uploaded.

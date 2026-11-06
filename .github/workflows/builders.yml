@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: builders-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   ZIG_VERSION: "0.14.1"
   CMAKE_VERSION: "4.3.4"
@@ -74,10 +78,12 @@ jobs:
           mkdir -p AppDir
           git archive --format=tar.gz -o AppDir/source.tar.gz HEAD
           cp tools/builder/builder.cmake tools/builder/AppRun \
-             tools/builder/README.md tools/builder/jp3-builder.desktop \
-             tools/builder/jp3-builder.png AppDir/
+             tools/builder/README.md tools/builder/NOTICES.txt \
+             tools/builder/jp3-builder.desktop tools/builder/jp3-builder.png AppDir/
           cp -a toolchain AppDir/toolchain
+          cp tools/builder/NINJA-COPYING.txt AppDir/toolchain/
           cp -a sdl2 AppDir/sdl2
+          cp engine/runner/external/SDL2/SDL2-2.28.5/COPYING.txt AppDir/sdl2/
           chmod +x AppDir/AppRun
 
           # The payload must reject a missing ROM before doing any work.
@@ -146,9 +152,12 @@ jobs:
           cp -a "dl/zig-x86_64-windows-${ZIG_VERSION}/." JP3-Builder/toolchain/zig/
           cp -a "dl/cmake-${CMAKE_VERSION}-windows-x86_64/." JP3-Builder/toolchain/cmake/
           cp dl/ninja.exe JP3-Builder/toolchain/
+          cp tools/builder/NINJA-COPYING.txt JP3-Builder/toolchain/
           cp tools/builder/zig-toolchain.cmake JP3-Builder/toolchain/
           cp -a "dl/SDL2-${SDL2_VERSION}/x86_64-w64-mingw32/." JP3-Builder/sdl2/
-          cp tools/builder/builder.cmake tools/builder/README.md JP3-Builder/
+          cp engine/runner/external/SDL2/SDL2-2.28.5/COPYING.txt JP3-Builder/sdl2/
+          cp tools/builder/builder.cmake tools/builder/README.md \
+             tools/builder/NOTICES.txt JP3-Builder/
           git archive --format=tar.gz -o JP3-Builder/source.tar.gz HEAD
           ./JP3-Builder/toolchain/zig/zig.exe cc -target x86_64-windows-gnu \
             -municode -O2 tools/builder/launcher.c \
