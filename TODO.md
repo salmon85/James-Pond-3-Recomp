@@ -351,3 +351,13 @@
       y40-183), and slots 1/3/4/5 render frame-identical. The move/attack and
       jump probes (12,121 / 14,221 frames) report zero dispatch, floor-unsafe,
       or interior-label misses.
+
+- [x] Ship self-contained builders instead of putting the ROM in CI
+      (`.github/workflows/builders.yml`). The Windows zip bundles Zig, CMake,
+      Ninja, SDL2 and the source; the Linux AppImage bundles the same plus a
+      statically linked SDL2 built on Ubuntu 22.04. Both ask for the user's own
+      ROM, verify its size/SHA-256, and compile locally. Verified locally: the
+      Linux builder's output renders slot 2 to the reference md5
+      (`ef76b38943d0c72f921f1cb6112e8b5b`), and the Windows cross-build from
+      the same toolchain does too. Needed for Zig: `-Wno-date-time`, the
+      `zig ar`/`zig ranlib` archive rules, and lld's `-u WinMain` spelling.

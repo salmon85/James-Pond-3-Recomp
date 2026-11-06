@@ -1,0 +1,45 @@
+#!/bin/sh
+# Linux launcher for the James Pond 3 builder.
+#
+# The AppImage is read-only, so builder.cmake compiles in a scratch cache and
+# copies only the finished game (plus jp3.md) into "James Pond 3 Recomp" in
+# the current directory.
+
+set -u
+
+here="${APPDIR:-$(dirname "$(readlink -f "$0")")}"
+out="${PWD}/James Pond 3 Recomp"
+
+printf 'James Pond 3 builder\n\nEnter the path to your ROM\n(James Pond 3 (USA, Europe).md): '
+if ! IFS= read -r rom; then
+    echo
+    echo "No ROM path given."
+    exit 1
+fi
+
+# Accept the quoting/escaping a terminal produces when a file is dropped in.
+cleaned=$(printf '%s' "$rom" | xargs 2>/dev/null) || cleaned=$rom
+[ -n "$cleaned" ] && rom=$cleaned
+if [ -z "$rom" ]; then
+    echo "No ROM path given."
+    exit 1
+fi
+
+"$here/toolchain/cmake/bin/cmake" \
+    -DROM="$rom" -DOUT_DIR="$out" -DPAYLOAD="$here" \
+    -P "$here/builder.cmake"
+rc=$?
+
+echo
+if [ "$rc" -eq 0 ]; then
+    echo "Done. The game is in:"
+    echo "  $out"
+    echo "Run ./JamesPond3Recomp there."
+else
+    echo "Build failed (exit code $rc). See the messages above."
+fi
+if [ -t 0 ]; then
+    printf 'Press Enter to close...'
+    read -r _
+fi
+exit "$rc"

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=James Pond 3 Builder
+Comment=Build James Pond 3 from your own ROM
+Exec=AppRun
+Icon=jp3-builder
+Terminal=true
+Categories=Game;
