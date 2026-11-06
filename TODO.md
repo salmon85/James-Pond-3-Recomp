@@ -316,11 +316,3 @@
       6,000-frame stress and `GENESIS_STRICT_JSR_STACK=1` all clean with zero
       audio drops. A 300-second real-audio all-cheats session held 59.942 fps
       with `audio_overflow_drops=0`.
-
-## Final step
-
-- [ ] Create a standalone setup/builder program that asks the user for the
-      game ROM, verifies it against the expected SHA-1/CRC, and then builds
-      the game. If needed, copy the ROM into a `game` folder stored under
-      `%APPDATA%\<game>` on Windows or `~/.config/<game>` on Linux.
-      Keep this item last: any new todo entries go above it.
