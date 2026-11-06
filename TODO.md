@@ -157,14 +157,33 @@
       continuation was on top of A7, but the native computed-JMP caller did
       not pop it; the result was a 4-byte-per-call guest-stack leak. The
       recompiler now recognises the self-relative `jmp (d8=-2,pc,d0.w)` bra
-      ladder: the CFG scan seeds each slot's `bra` destination as a forced
-      in-function label and the JMP emitter generates a switch that `goto`s
-      the handler directly, charging the skipped `bra`'s 10 cycles. The three
-      remaining sites `$0B76B0` (43 slots), `$0BDBE8` (3) and `$0BDC4C` (6)
-      are now `bra_ladder_switch`; the dispatch audit reports 0
+      ladder: the CFG scan marks each slot's `bra` destination as a forced
+      in-function label — and carries that ownership along the handler's own
+      fall-through and branch edges, stopping at real function entries — and
+      the JMP emitter generates a switch that `goto`s the handler directly,
+      charging the skipped `bra`'s 10 cycles. The three remaining sites
+      `$0B76B0` (43 slots), `$0BDBE8` (3) and `$0BDC4C` (6) are now
+      `bra_ladder_switch`; the dispatch audit reports 0
       `INTERIOR_UNRESOLVED`. Boot plus move/attack/jump probes ran 36,783
       frames with 0 dispatch misses, 0 interior-label misses and 0
       floor-unsafe entries.
+- [x] Slot-1 frog tongue/aim loop after transforming: the first ladder switch
+      promoted the handler bodies' interior branch targets as functions. In
+      the `$0B76B0` animation VM a promotion at `$0B77C6` cut the
+      `$0B77C4` fall-through, so the emitter landed on `$0B77DE` and skipped
+      `$0B77C6`'s `move.b d3,(a2)` (`$79` = `$FF`/1). That fake aim state
+      replayed `$0C0354` forever. Carrying `forced` ownership along the
+      handler's own CFG removes the nine spurious entries; the frog save now
+      matches the pre-switch build frame-for-frame through 303 frames
+      (`$79` stays 0), and gameplay/move-attack/jump probes (10,441 / 12,121
+      / 14,221 frames) again report zero dispatch, interior-label and
+      floor-unsafe misses.
+- [ ] Latent emitter edge case: if linear flow falls into a mid-list address
+      that is a separate function entry, the emitter silently skips the
+      instructions between the entry and the next emission point (the class
+      that broke `$0B77C4` -> `$0B77C6`). Not reachable now that forced
+      ownership keeps ladder handlers whole, but a future promotion that
+      lands mid-flow would hit it again; emit a terminator at the boundary.
 - [ ] Validate later areas, enemies, and level completion against NTSC MAME.
 - [x] The development `--wav` capture always reported 0 bytes because the
       input-script EXIT path returned from `main()` before the cleanup that

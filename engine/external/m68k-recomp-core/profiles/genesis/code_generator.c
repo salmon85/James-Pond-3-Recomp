@@ -1559,6 +1559,18 @@ static void scan_function(const GenesisRom *rom, uint32_t start_addr,
 
             addrset_insert(instrs, pc);
 
+            /* A forced bra-ladder handler owns its own control flow, not just
+             * the entry promoted by the dispatcher. Carrying `forced` along
+             * intra-handler edges keeps the territory test from promoting
+             * interior labels as new functions (which would sever linear
+             * fall-through in the emitter). Stop at real function entries —
+             * those are genuine tail exits such as `bra $0B75F6`. */
+            bool this_forced = addrset_contains(&forced, pc);
+#define FORCE_EDGE(t) \
+            do { if (this_forced && \
+                     !addr_is_function_entry((t), sorted_funcs, nfuncs)) \
+                     addrset_insert(&forced, (t)); } while (0)
+
             switch (instr.mnemonic) {
             case MN_RTS:
             case MN_RTE:
@@ -1568,8 +1580,10 @@ static void scan_function(const GenesisRom *rom, uint32_t start_addr,
                 goto next_work; /* terminate this path */
 
             case MN_BRA:
-                if (instr.has_target && instr.target_addr != pc)
+                if (instr.has_target && instr.target_addr != pc) {
+                    FORCE_EDGE(instr.target_addr);
                     addrset_insert(&worklist, instr.target_addr);
+                }
                 goto next_work;
 
             case MN_JMP:
@@ -1587,14 +1601,18 @@ static void scan_function(const GenesisRom *rom, uint32_t start_addr,
                 goto next_work;
 
             case MN_Bcc:
-                if (instr.has_target)
+                if (instr.has_target) {
+                    FORCE_EDGE(instr.target_addr);
                     addrset_insert(&worklist, instr.target_addr);
+                }
                 /* fall through: continue linear scan */
                 break;
 
             case MN_DBcc:
-                if (instr.has_target)
+                if (instr.has_target) {
+                    FORCE_EDGE(instr.target_addr);
                     addrset_insert(&worklist, instr.target_addr);
+                }
                 break;
 
             case MN_BSR:
@@ -1630,6 +1648,7 @@ static void scan_function(const GenesisRom *rom, uint32_t start_addr,
                 break;
             }
 
+            FORCE_EDGE(pc + instr.byte_length);
             pc += instr.byte_length;
         }
         next_work:;
