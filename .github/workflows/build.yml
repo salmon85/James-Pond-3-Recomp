@@ -297,12 +297,14 @@ jobs:
           EOF
           tag=continuous
           title="James Pond 3 - latest build"
-          if gh release view "$tag" >/dev/null 2>&1; then
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$tag" \
               -f sha="$GITHUB_SHA" -F force=true >/dev/null
-            gh release upload "$tag" dist/* --clobber
-            gh release edit "$tag" --title "$title" --notes-file release-notes.md
-          else
-            gh release create "$tag" dist/* --target "$GITHUB_SHA" \
+            gh release upload "$tag" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" \
               --title "$title" --notes-file release-notes.md
+          else
+            gh release create "$tag" dist/* --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" --title "$title" \
+              --notes-file release-notes.md
           fi
