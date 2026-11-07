@@ -369,10 +369,13 @@
       package contains the ROM: the zip holds only the exe, `SDL2.dll`, and
       the docs, and the AppImage holds only the exe and docs.
 
-- [ ] Keep release executables from leaving debug files and publish
+- [x] Keep release executables from leaving debug files and publish
       automatically. Release builds configure
       `-DGENESIS_RUNTIME_EVIDENCE=OFF` (local builds stay ON): a normal run
       creates no evidence files, only user-requested settings/saves (and a
       crash log if the game aborts). CI's release job refreshes one rolling
       `continuous` release on every successful master build, moving the tag
-      to the built commit and replacing both assets.
+      to the built commit and replacing both assets. CI run 42375117323
+      passed; the downloaded packages boot to the frame-600 hash and leave
+      only the exe/ROM/docs after a run, and the Windows exe still finds a
+      beside-exe `jp3.md` with no arguments.
