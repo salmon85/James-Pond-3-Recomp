@@ -8,6 +8,8 @@
 
 # ROMs and derived dumps (never commit)
 /James Pond 3*.md
+/James Pond 3*.md.xz
+/.rom.b64
 /game/jp3.md
 /game/*.bin
 *.sav

@@ -1,0 +1,7 @@
+#!/bin/sh
+# AppImage entry point. The game anchors config/saves and jp3.md next to the
+# .AppImage via $APPIMAGE (see init_exe_dir in engine/runner/main.c).
+set -e
+
+export LD_LIBRARY_PATH="$APPDIR/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+exec "$APPDIR/usr/bin/JamesPond3Recomp" "$@"

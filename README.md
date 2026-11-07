@@ -27,6 +27,16 @@ with the exact filename above, or create the expected link:
 ln -sf '../James Pond 3 (USA, Europe).md' game/jp3.md
 ```
 
+## Prebuilt builds
+
+CI builds `JP3-linux-x86_64.AppImage` and `JP3-windows-x86_64.zip` from the
+ROM kept in repository Actions secrets. The ROM is never committed or
+uploaded as an artifact. Neither package contains it: put your own `jp3.md`
+next to the executable or `.AppImage`; without one, the runner asks you to
+select the ROM.
+
+Maintainers refresh the CI copy with `tools/ci/upload-rom-secrets.sh`.
+
 ## Build
 
 Requirements: CMake ≥ 3.16, Ninja or Make, a C11/C++17 toolchain, SDL2

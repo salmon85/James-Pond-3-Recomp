@@ -2537,6 +2537,16 @@ int main(int argc, char *argv[])
 #endif
     }
 
+    /* Prebuilt packages ship without the ROM: use jp3.md next to the
+     * executable or .AppImage (init_exe_dir anchors there) before falling
+     * back to the interactive picker. */
+    if (!rom_path) {
+        static char beside_exe[600];
+        snprintf(beside_exe, sizeof beside_exe, "%s", exe_relative("jp3.md"));
+        FILE *probe = fopen(beside_exe, "rb");
+        if (probe) { fclose(probe); rom_path = beside_exe; }
+    }
+
     if (!rom_path) {
 #ifdef _WIN32
         static char picked_path[512] = {0};

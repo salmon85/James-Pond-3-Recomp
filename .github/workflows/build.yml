@@ -1,0 +1,234 @@
+name: Build
+
+# The ROM is copyrighted and never committed. It is stored in repository
+# secrets as base64 chunks (tools/ci/upload-rom-secrets.sh) and reassembled
+# only inside the runner. Artifacts never contain it: users supply jp3.md.
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            artifact: JP3-linux-x86_64
+          - os: windows-latest
+            artifact: JP3-windows-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # The chunk writes are split into small run blocks because GitHub limits
+      # a scalar containing ${{ }} to 21,000 characters. Secret values are
+      # substituted after that check, so the chunk data itself is not counted.
+      - name: Prepare ROM stream
+        shell: bash
+        run: rm -f .rom.b64
+
+      - name: ROM chunks 1/6
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' '${{ secrets.ROM_CHUNK_001 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_002 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_003 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_004 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_005 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_006 }}' >> .rom.b64
+
+      - name: ROM chunks 2/6
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' '${{ secrets.ROM_CHUNK_007 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_008 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_009 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_010 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_011 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_012 }}' >> .rom.b64
+
+      - name: ROM chunks 3/6
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' '${{ secrets.ROM_CHUNK_013 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_014 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_015 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_016 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_017 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_018 }}' >> .rom.b64
+
+      - name: ROM chunks 4/6
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' '${{ secrets.ROM_CHUNK_019 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_020 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_021 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_022 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_023 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_024 }}' >> .rom.b64
+
+      - name: ROM chunks 5/6
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' '${{ secrets.ROM_CHUNK_025 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_026 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_027 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_028 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_029 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_030 }}' >> .rom.b64
+
+      - name: ROM chunks 6/6
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' '${{ secrets.ROM_CHUNK_031 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_032 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_033 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_034 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_035 }}' >> .rom.b64
+          printf '%s' '${{ secrets.ROM_CHUNK_036 }}' >> .rom.b64
+
+      - name: Verify ROM
+        shell: bash
+        env:
+          PYTHON: ${{ runner.os == 'Windows' && 'python' || 'python3' }}
+        run: |
+          set -euo pipefail
+          mkdir -p game
+          "$PYTHON" - .rom.b64 game/jp3.md <<'PY'
+          import base64, hashlib, lzma, pathlib, sys
+          raw = lzma.decompress(base64.b64decode(pathlib.Path(sys.argv[1]).read_bytes()))
+          sha = hashlib.sha256(raw).hexdigest()
+          assert len(raw) == 2097152, len(raw)
+          assert sha == "8f52e27945b96d6c37fda28c44d39d65d805cc0b58332f9b4a2eb26dff540d29", sha
+          pathlib.Path(sys.argv[2]).write_bytes(raw)
+          print("ROM verified:", len(raw), sha)
+          PY
+          rm -f .rom.b64
+
+      - name: Install build dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libsdl2-dev ninja-build
+
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel "$(nproc)"
+
+      - name: Smoke test (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          log=$(SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
+            ./build/JamesPond3Recomp game/jp3.md \
+              --max-frames 600 --turbo --hash-frames 600 2>&1)
+          echo "$log" | tail -20
+          grep -Fq 'hash=0xD9EE297FF4A52325' <<<"$log"
+
+      - name: Package AppImage (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          mkdir -p AppDir/usr/bin AppDir/usr/lib AppDir/usr/share/doc/jp3
+          cp build/JamesPond3Recomp AppDir/usr/bin/
+          sdl=$(ldd build/JamesPond3Recomp | awk '/libSDL2-2\.0\.so\.0/ {print $3}')
+          cp -L "$sdl" AppDir/usr/lib/libSDL2-2.0.so.0
+          cp packaging/AppRun packaging/jp3.desktop packaging/jp3.png AppDir/
+          cp engine/LICENSE.md AppDir/usr/share/doc/jp3/LICENSE
+          cp engine/THIRD-PARTY-LICENSES.md packaging/README.txt AppDir/usr/share/doc/jp3/
+          chmod +x AppDir/AppRun
+          test ! -e AppDir/jp3.md
+          curl -fsSL -o appimagetool \
+            "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
+          chmod +x appimagetool
+          ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 \
+            ./appimagetool --no-appstream AppDir JP3-linux-x86_64.AppImage
+
+      - name: Smoke test AppImage (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          log=$(APPIMAGE_EXTRACT_AND_RUN=1 \
+            SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=dummy \
+            ./JP3-linux-x86_64.AppImage game/jp3.md \
+              --max-frames 600 --turbo --hash-frames 600 2>&1)
+          echo "$log" | tail -20
+          grep -Fq 'hash=0xD9EE297FF4A52325' <<<"$log"
+
+      - name: Upload AppImage
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: JP3-linux-x86_64.AppImage
+          if-no-files-found: error
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+          if ($LASTEXITCODE -ne 0) { throw "configure failed" }
+          cmake --build build --config Release --parallel
+          if ($LASTEXITCODE -ne 0) { throw "build failed" }
+
+      - name: Smoke test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $env:SDL_AUDIODRIVER = "dummy"
+          $env:SDL_VIDEODRIVER = "dummy"
+          $out = & .\build\Release\JamesPond3Recomp.exe game\jp3.md `
+            --max-frames 600 --turbo --hash-frames 600 2>&1
+          if ($LASTEXITCODE -ne 0) {
+            $out | Select-Object -Last 40
+            throw "game exited $LASTEXITCODE"
+          }
+          $out | Select-Object -Last 20
+          if (-not ($out -match 'hash=0xD9EE297FF4A52325')) {
+            throw "frame hash mismatch"
+          }
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          python engine\tools\package_release.py `
+            --exe build\Release\JamesPond3Recomp.exe `
+            --extra engine\runner\external\SDL2\SDL2-2.28.5\lib\x64\SDL2.dll `
+            --license engine\LICENSE.md `
+            --notices engine\THIRD-PARTY-LICENSES.md `
+            --readme packaging\README.txt `
+            --out JP3-windows-x86_64.zip
+          if ($LASTEXITCODE -ne 0) { throw "package failed" }
+
+      - name: Upload Windows zip
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: JP3-windows-x86_64.zip
+          if-no-files-found: error

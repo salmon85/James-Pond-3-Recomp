@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=James Pond 3
+Comment=James Pond 3: Operation Starfish static recompilation
+Exec=AppRun
+Icon=jp3
+Terminal=false
+Categories=Game;
