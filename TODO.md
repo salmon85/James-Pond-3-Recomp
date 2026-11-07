@@ -363,3 +363,8 @@
       Static SDL2 2.28.5 needs an explicit `SDL_RENDERER_SOFTWARE` retry: its
       `SDL_CreateRenderer` requires every requested flag bit, so
       `ACCELERATED` does not degrade on its own when no GL/D3D driver exists.
+      CI run 42372792680 passed both jobs. Downloaded artifacts boot to the
+      frame-600 hash on Linux (bundled static SDL2) and under Wine on Windows;
+      the Windows exe finds a beside-exe `jp3.md` with no arguments. Neither
+      package contains the ROM: the zip holds only the exe, `SDL2.dll`, and
+      the docs, and the AppImage holds only the exe and docs.
