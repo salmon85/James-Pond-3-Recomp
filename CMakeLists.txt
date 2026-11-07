@@ -88,6 +88,12 @@ target_include_directories(JamesPond3Recomp PRIVATE
 target_link_libraries(JamesPond3Recomp PRIVATE SDL2::SDL2main SDL2::SDL2)
 if(WIN32)
     target_link_libraries(JamesPond3Recomp PRIVATE ws2_32 comdlg32)
+    # The vendored SDL2 is a DLL; stage it beside the exe for local runs and
+    # the release package (RELEASING.md expects build/Release/SDL2.dll).
+    add_custom_command(TARGET JamesPond3Recomp POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:SDL2::SDL2>"
+            "$<TARGET_FILE_DIR:JamesPond3Recomp>/SDL2.dll")
 endif()
 genesisrecomp_runner_target(JamesPond3Recomp)
 

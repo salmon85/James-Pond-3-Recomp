@@ -241,7 +241,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           python engine\tools\package_release.py `
             --exe build\Release\JamesPond3Recomp.exe `
-            --extra engine\runner\external\SDL2\SDL2-2.28.5\lib\x64\SDL2.dll `
+            --extra build\Release\SDL2.dll `
             --license engine\LICENSE.md `
             --notices engine\THIRD-PARTY-LICENSES.md `
             --readme packaging\README.txt `
