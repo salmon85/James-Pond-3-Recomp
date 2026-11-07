@@ -34,6 +34,10 @@
  * Cost: lookups are hashed; a file is rewritten only when a NEW address is
  * recorded, and session counters are flushed at most once a wall-clock
  * minute (checked every 600 frames) and at exit.
+ *
+ * Release packages are configured with -DGENESIS_RUNTIME_EVIDENCE=OFF
+ * (GENESIS_NO_RUNTIME_EVIDENCE): the in-memory sets still work, but no file
+ * is read or written, so a shipped executable leaves no evidence behind.
  */
 #ifndef GENESIS_RUNTIME_EVIDENCE_H
 #define GENESIS_RUNTIME_EVIDENCE_H

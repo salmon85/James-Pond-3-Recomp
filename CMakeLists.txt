@@ -39,6 +39,8 @@ endforeach()
 
 option(SONIC_REVERSE_DEBUG
     "Enable generated-function block tracing and rdb_* TCP commands" OFF)
+option(GENESIS_RUNTIME_EVIDENCE
+    "Write dispatch/floor evidence files next to the executable" ON)
 
 include("${RECOMP_ROOT}/cmake/GenesisRecompGenerated.cmake")
 genesisrecomp_add_generated_sources(
@@ -72,6 +74,10 @@ if(MSVC)
     target_compile_options(JamesPond3Recomp PRIVATE /utf-8)
 else()
     target_compile_options(JamesPond3Recomp PRIVATE -g)
+endif()
+if(NOT GENESIS_RUNTIME_EVIDENCE)
+    target_compile_definitions(JamesPond3Recomp PRIVATE
+        GENESIS_NO_RUNTIME_EVIDENCE=1)
 endif()
 
 target_include_directories(JamesPond3Recomp PRIVATE

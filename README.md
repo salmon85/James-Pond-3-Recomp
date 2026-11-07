@@ -30,10 +30,16 @@ ln -sf '../James Pond 3 (USA, Europe).md' game/jp3.md
 ## Prebuilt builds
 
 CI builds `JP3-linux-x86_64.AppImage` and `JP3-windows-x86_64.zip` from the
-ROM kept in repository Actions secrets. The ROM is never committed or
-uploaded as an artifact. Neither package contains it: put your own `jp3.md`
-next to the executable or `.AppImage`; without one, the runner asks you to
-select the ROM.
+ROM kept in repository Actions secrets. The ROM is never committed, uploaded
+as an artifact, or included in either package. Put your own `jp3.md` next to
+the executable or `.AppImage`; without one, the runner asks you to select the
+ROM.
+
+Every successful master build refreshes the rolling `continuous` release, so
+the download links stay stable. Release builds are configured with
+`-DGENESIS_RUNTIME_EVIDENCE=OFF` and write no diagnostic evidence files
+(`dispatch_misses.toml` and friends); only settings, saves, and a crash log
+(if the game aborts) can appear.
 
 Maintainers refresh the CI copy with `tools/ci/upload-rom-secrets.sh`.
 

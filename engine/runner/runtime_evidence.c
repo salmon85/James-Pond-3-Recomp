@@ -22,6 +22,14 @@
 #endif
 #endif
 
+/* Release packages are configured with -DGENESIS_RUNTIME_EVIDENCE=OFF:
+ * they must not leave dispatch/floor evidence files next to the executable. */
+#ifdef GENESIS_NO_RUNTIME_EVIDENCE
+#define EVIDENCE_FILES 0
+#else
+#define EVIDENCE_FILES 1
+#endif
+
 /* Generated per executable by cmake/GenesisBuildInfo.cmake (refreshed every
  * build, rewritten only when it changes, so only this file recompiles). */
 #if defined(__has_include)
@@ -386,6 +394,7 @@ static int emit_file(FILE *fp, const EvFile *f, const char *when)
 /* Crash-safe rewrite: temp file + atomic replace. */
 static int write_file(const EvFile *f)
 {
+    if (!EVIDENCE_FILES) return 0;
     char path[600], tmp[640], rel[200], when[32];
     snprintf(rel, sizeof rel, "%s.toml", f->stem);
     path_of(path, sizeof path, rel);
@@ -493,15 +502,17 @@ void runtime_evidence_init(const char *game_short_name, const char *game_display
     snprintf(s_build_info, sizeof s_build_info, "%s", genesis_build_info_string());
     sanitize(s_build_info);
 
-    for (int k = 0; k < RT_EVIDENCE_KIND_COUNT; k++) load_one(&s_files[k]);
     s_last_flush = time(NULL);
     s_flushed_frames = 0;
-    atexit(evidence_atexit);
-    unsigned session = 0;
-    for (int k = 0; k < RT_EVIDENCE_KIND_COUNT; k++)
-        if (s_files[k].sessions > session) session = s_files[k].sessions;
-    fprintf(stderr, "[evidence] build %s (%s); session %u of this build\n",
-            s_build_id, s_build_info, session);
+    if (EVIDENCE_FILES) {
+        for (int k = 0; k < RT_EVIDENCE_KIND_COUNT; k++) load_one(&s_files[k]);
+        atexit(evidence_atexit);
+        unsigned session = 0;
+        for (int k = 0; k < RT_EVIDENCE_KIND_COUNT; k++)
+            if (s_files[k].sessions > session) session = s_files[k].sessions;
+        fprintf(stderr, "[evidence] build %s (%s); session %u of this build\n",
+                s_build_id, s_build_info, session);
+    }
 }
 
 int runtime_evidence_has(RuntimeEvidenceKind kind, uint32_t addr)
@@ -527,6 +538,7 @@ int runtime_evidence_add(RuntimeEvidenceKind kind, uint32_t addr, uint64_t frame
 
 void runtime_evidence_sync(RuntimeEvidenceKind kind)
 {
+    if (!EVIDENCE_FILES) return;
     if ((unsigned)kind >= RT_EVIDENCE_KIND_COUNT || !s_inited) return;
     EvFile *f = &s_files[kind];
     if (!f->dirty) return;
@@ -549,7 +561,7 @@ void runtime_evidence_tick(void)
 
 void runtime_evidence_flush(void)
 {
-    if (!s_inited) return;
+    if (!EVIDENCE_FILES || !s_inited) return;
     int any_dirty = 0;
     for (int k = 0; k < RT_EVIDENCE_KIND_COUNT; k++) any_dirty |= s_files[k].dirty;
     s_last_flush = time(NULL);
