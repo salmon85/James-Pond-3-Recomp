@@ -24,7 +24,7 @@ jobs:
         include:
           - os: ubuntu-22.04
             artifact: JP3-linux-x86_64
-          - os: windows-latest
+          - os: windows-2022
             artifact: JP3-windows-x86_64
     runs-on: ${{ matrix.os }}
     steps:
@@ -125,13 +125,38 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libsdl2-dev ninja-build
+          sudo apt-get install -y --no-install-recommends \
+            ninja-build \
+            libasound2-dev libpulse-dev libudev-dev libdbus-1-dev \
+            libx11-dev libxext-dev libxrandr-dev libxi-dev \
+            libxcursor-dev libxfixes-dev libxss-dev \
+            libwayland-dev libxkbcommon-dev \
+            libegl1-mesa-dev libgles2-mesa-dev libgl1-mesa-dev
+
+      # Ubuntu 22.04's SDL2 is 2.0.20; the runner needs SDL_RenderGetWindow
+      # (2.0.22+). Build the same 2.28.5 release the engine vendors and link
+      # it statically so the AppImage does not depend on the host version.
+      - name: Build SDL2 (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          curl -fsSL -o sdl2.tar.gz \
+            "https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-2.28.5.tar.gz"
+          tar -xzf sdl2.tar.gz
+          cmake -S SDL2-2.28.5 -B sdl2-build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$PWD/sdl2" \
+            -DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_STATIC_PIC=ON -DSDL_TEST=OFF \
+            -DSDL_PIPEWIRE=OFF
+          cmake --build sdl2-build --parallel "$(nproc)"
+          cmake --install sdl2-build
 
       - name: Build (Linux)
         if: runner.os == 'Linux'
         run: |
           set -euo pipefail
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DSDL2_DIR="$PWD/sdl2/lib/cmake/SDL2"
           cmake --build build --parallel "$(nproc)"
 
       - name: Smoke test (Linux)
@@ -148,10 +173,8 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           set -euo pipefail
-          mkdir -p AppDir/usr/bin AppDir/usr/lib AppDir/usr/share/doc/jp3
+          mkdir -p AppDir/usr/bin AppDir/usr/share/doc/jp3
           cp build/JamesPond3Recomp AppDir/usr/bin/
-          sdl=$(ldd build/JamesPond3Recomp | awk '/libSDL2-2\.0\.so\.0/ {print $3}')
-          cp -L "$sdl" AppDir/usr/lib/libSDL2-2.0.so.0
           cp packaging/AppRun packaging/jp3.desktop packaging/jp3.png AppDir/
           cp engine/LICENSE.md AppDir/usr/share/doc/jp3/LICENSE
           cp engine/THIRD-PARTY-LICENSES.md packaging/README.txt AppDir/usr/share/doc/jp3/

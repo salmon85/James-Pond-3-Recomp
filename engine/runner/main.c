@@ -2806,6 +2806,12 @@ int main(int argc, char *argv[])
         renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     }
     if (!renderer) {
+        /* SDL 2.28 only matches drivers whose flags include every requested
+         * bit, so ACCELERATED never falls back on its own; headless runs and
+         * hosts without GL/D3D still need the software renderer. */
+        renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
+    }
+    if (!renderer) {
         fprintf(stderr, "SDL_CreateRenderer: %s\n", SDL_GetError());
         return 1;
     }

@@ -360,3 +360,6 @@
       runtime). Both package without `jp3.md`; the runner now prefers
       `jp3.md` next to the exe/.AppImage over the picker. Headless boots must
       reach frame 600 with hash `0xD9EE297FF4A52325` on both platforms.
+      Static SDL2 2.28.5 needs an explicit `SDL_RENDERER_SOFTWARE` retry: its
+      `SDL_CreateRenderer` requires every requested flag bit, so
+      `ACCELERATED` does not degrade on its own when no GL/D3D driver exists.
